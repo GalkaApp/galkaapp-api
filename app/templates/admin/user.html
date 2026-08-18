@@ -1,0 +1,60 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ user.email }} — TodoApi Admin{% endblock %}
+{% set colors = {"blue": "#3B6FE0", "green": "#4E9C6E", "amber": "#C08B3A", "purple": "#8A7BD8", "gray": "#6E6E6B"} %}
+{% block content %}
+<h1>{{ user.email }}</h1>
+<div class="sub">user #{{ user.id }} · seq {{ user.last_seq }} · registered {{ user.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
+
+<h2>Projects · {{ projects | length }}</h2>
+{% if projects %}
+<table>
+  <tr><th>Name</th><th>Color</th><th class="num">Sort</th><th>Status</th><th class="num">Seq</th><th>Updated</th></tr>
+  {% for p in projects %}
+  <tr>
+    <td><span class="dot" style="background: {{ colors.get(p.color_key, '#6E6E6B') }}"></span>{{ p.name }}</td>
+    <td class="muted">{{ p.color_key }}</td>
+    <td class="num">{{ p.sort_order }}</td>
+    <td>{% if p.deleted %}<span class="pill deleted">deleted</span>{% else %}<span class="pill open">active</span>{% endif %}</td>
+    <td class="num">{{ p.seq }}</td>
+    <td class="muted">{{ p.updated_at.strftime("%Y-%m-%d %H:%M") }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<div class="empty">No projects.</div>{% endif %}
+
+<h2>Tasks · {{ tasks | length }}{% if tasks | length == 500 %} (latest 500){% endif %}</h2>
+{% if tasks %}
+<table>
+  <tr><th>Title</th><th>Project</th><th>Due</th><th class="num">Priority</th><th>Status</th><th class="num">Seq</th><th>Updated</th></tr>
+  {% for t in tasks %}
+  <tr>
+    <td class="wrap">{{ t.title }}</td>
+    <td class="muted">{{ project_names.get(t.project_uuid, "—") }}</td>
+    <td class="muted">{% if t.due_date %}{{ t.due_date.strftime("%Y-%m-%d") }}{% if t.has_time %} {{ t.due_date.strftime("%H:%M") }}{% endif %}{% else %}—{% endif %}</td>
+    <td class="num">{{ t.priority }}</td>
+    <td>
+      {% if t.deleted %}<span class="pill deleted">deleted</span>
+      {% elif t.is_completed %}<span class="pill done">done</span>
+      {% else %}<span class="pill open">open</span>{% endif %}
+    </td>
+    <td class="num">{{ t.seq }}</td>
+    <td class="muted">{{ t.updated_at.strftime("%Y-%m-%d %H:%M") }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<div class="empty">No tasks.</div>{% endif %}
+
+<h2>Devices · {{ tokens | length }}</h2>
+{% if tokens %}
+<table>
+  <tr><th>Device</th><th>Token</th><th>Issued</th></tr>
+  {% for token in tokens %}
+  <tr>
+    <td>{{ token.device_name or "—" }}</td>
+    <td class="muted">{{ token.token[:8] }}…</td>
+    <td class="muted">{{ token.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<div class="empty">No active tokens.</div>{% endif %}
+{% endblock %}

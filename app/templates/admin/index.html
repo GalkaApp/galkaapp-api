@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}
+{% block title %}Users — TodoApi Admin{% endblock %}
+{% block content %}
+<h1>Users</h1>
+<div class="sub">{{ rows | length }} registered</div>
+{% if rows %}
+<table>
+  <tr>
+    <th>ID</th><th>Email</th><th class="num">Projects</th><th class="num">Tasks</th>
+    <th class="num">Open</th><th class="num">Devices</th><th class="num">Seq</th><th>Registered</th>
+  </tr>
+  {% for row in rows %}
+  <tr>
+    <td class="num">{{ row.user.id }}</td>
+    <td><a href="/admin/users/{{ row.user.id }}">{{ row.user.email }}</a></td>
+    <td class="num">{{ row.projects }}</td>
+    <td class="num">{{ row.tasks }}</td>
+    <td class="num">{{ row.open_tasks }}</td>
+    <td class="num">{{ row.devices }}</td>
+    <td class="num">{{ row.user.last_seq }}</td>
+    <td class="muted">{{ row.user.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="empty">No users yet.</div>
+{% endif %}
+{% endblock %}
