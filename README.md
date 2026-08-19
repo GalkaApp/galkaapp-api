@@ -1,6 +1,6 @@
-# TodoApi
+# Galka API
 
-Sync backend for the Todo app (SwiftUI multiplatform client in `../TodoAp`).
+Sync backend for Galka (SwiftUI multiplatform client in `../TodoAp`).
 
 **Stack:** FastAPI · SQLAlchemy 2 (async) · PostgreSQL (asyncpg) · Redis pub/sub · SSE (sse-starlette).
 FastAPI was chosen over Django because the realtime channel (SSE + pub/sub fan-out) is the
