@@ -1,6 +1,6 @@
 # TodoApi
 
-Sync backend for the Todo app (SwiftUI multiplatform client in `../Todo`).
+Sync backend for the Todo app (SwiftUI multiplatform client in `../TodoAp`).
 
 **Stack:** FastAPI · SQLAlchemy 2 (async) · PostgreSQL (asyncpg) · Redis pub/sub · SSE (sse-starlette).
 FastAPI was chosen over Django because the realtime channel (SSE + pub/sub fan-out) is the
@@ -73,7 +73,7 @@ Client model types are generated from the OpenAPI schema — do not write API DT
 in the Swift app:
 
 ```bash
-make swift-types   # writes ../Todo/Todo/Api/ApiTypes.swift
+make swift-types   # writes ../TodoAp/Galka/Api/ApiTypes.swift
 ```
 
 Emits one Codable struct per Pydantic schema (camelCase + CodingKeys, UUID/Date mapping),

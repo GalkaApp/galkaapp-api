@@ -1,4 +1,4 @@
-SWIFT_OUT = ../Todo/Galka/Api/ApiTypes.swift
+SWIFT_OUT = ../TodoAp/Galka/Api/ApiTypes.swift
 PY = .venv/bin/python
 
 .PHONY: run test swift-types openapi-json

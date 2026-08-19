@@ -1,7 +1,7 @@
 """Generate Swift Codable types from the FastAPI OpenAPI schema.
 
 Usage:
-    .venv/bin/python scripts/generate_swift_types.py ../Todo/Todo/Api/ApiTypes.swift
+    .venv/bin/python scripts/generate_swift_types.py ../TodoAp/Galka/Api/ApiTypes.swift
 
 Reads the OpenAPI spec straight from the app factory (no running server needed)
 and emits a single self-contained Swift file: one struct per Pydantic schema,
