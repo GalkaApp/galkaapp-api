@@ -95,7 +95,7 @@ app/
 ├── main.py        app factory (tests inject SQLite + in-memory bus)
 ├── config.py      Settings (env prefix TODOAPI_)
 ├── db.py          Database: engine + session factory
-├── models.py      User, AuthToken, Project, Section, Tag, Task, LogEntry (naive-UTC datetimes)
+├── models.py      User, AuthToken, Project, Tag, Task, LogEntry (naive-UTC datetimes)
 ├── schemas.py     Pydantic DTOs
 ├── security.py    bcrypt hashing, token generation
 ├── deps.py        session + bearer-token dependencies

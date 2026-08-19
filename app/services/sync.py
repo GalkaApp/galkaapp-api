@@ -6,15 +6,13 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.events import EventBus
-from app.models import LogEntry, Project, Section, Tag, Task, User, utcnow
+from app.models import LogEntry, Project, Tag, Task, User, utcnow
 from app.services.recurrence import RecurrenceRule, reset_checklist
 from app.schemas import (
     LogOut,
     LogPayload,
     ProjectOut,
     ProjectPayload,
-    SectionOut,
-    SectionPayload,
     SyncConflicts,
     SyncPullResponse,
     SyncPushRequest,
@@ -34,9 +32,6 @@ class SyncService:
         projects = (await session.scalars(
             select(Project).where(Project.user_id == user.id, Project.seq > since)
         )).all()
-        sections = (await session.scalars(
-            select(Section).where(Section.user_id == user.id, Section.seq > since)
-        )).all()
         tags = (await session.scalars(
             select(Tag).where(Tag.user_id == user.id, Tag.seq > since)
         )).all()
@@ -50,7 +45,6 @@ class SyncService:
         return SyncPullResponse(
             seq=seq or 0,
             projects=[ProjectOut.model_validate(p) for p in projects],
-            sections=[SectionOut.model_validate(s) for s in sections],
             tags=[TagOut.model_validate(t) for t in tags],
             tasks=[TaskOut.model_validate(t) for t in tasks],
             logs=[LogOut.model_validate(entry) for entry in logs],
@@ -64,7 +58,7 @@ class SyncService:
         origin: str,
         bus: EventBus,
     ) -> SyncPushResponse:
-        total = (len(payload.projects) + len(payload.sections) + len(payload.tags)
+        total = (len(payload.projects) + len(payload.tags)
                  + len(payload.tasks) + len(payload.logs))
         if total == 0:
             seq = await session.scalar(select(User.last_seq).where(User.id == user.id))
@@ -83,13 +77,6 @@ class SyncService:
                 applied += 1
             else:
                 conflicts.projects.append(ProjectOut.model_validate(row))
-
-        for incoming in payload.sections:
-            row = await SyncService._apply(session, user.id, Section, incoming, seq_iter)
-            if row is None:
-                applied += 1
-            else:
-                conflicts.sections.append(SectionOut.model_validate(row))
 
         for incoming in payload.tags:
             row = await SyncService._apply(session, user.id, Tag, incoming, seq_iter)
@@ -132,8 +119,8 @@ class SyncService:
     async def _apply(
         session: AsyncSession,
         user_id: int,
-        model: type[Project] | type[Section] | type[Tag] | type[Task] | type[LogEntry],
-        incoming: ProjectPayload | SectionPayload | TagPayload | TaskPayload | LogPayload,
+        model: type[Project] | type[Tag] | type[Task] | type[LogEntry],
+        incoming: ProjectPayload | TagPayload | TaskPayload | LogPayload,
         seq_iter: Iterator[int],
     ):
         """Upsert one record. Returns None when applied, or the (newer) server row on conflict."""

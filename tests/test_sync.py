@@ -143,21 +143,12 @@ async def test_requires_auth(client):
     assert (await client.post("/sync", json={})).status_code == 401
 
 
-SECTION_UUID = str(uuid.uuid4())
 TAG_UUID = str(uuid.uuid4())
 
 
-async def test_sections_tags_and_new_task_fields_roundtrip(client):
+async def test_tags_and_new_task_fields_roundtrip(client):
     token = await register(client)
 
-    section = {
-        "uuid": SECTION_UUID,
-        "project_uuid": PROJECT_UUID,
-        "name": "Backlog",
-        "sort_order": 1,
-        "created_at": "2026-08-17T09:00:00Z",
-        "updated_at": "2026-08-17T10:00:00Z",
-    }
     tag = {
         "uuid": TAG_UUID,
         "name": "errand",
@@ -169,31 +160,27 @@ async def test_sections_tags_and_new_task_fields_roundtrip(client):
         sort_order=5,
         recurrence_rule="weekly;weekday=2",
         checklist='[{"id":"x","title":"step 1","isDone":false}]',
-        section_uuid=SECTION_UUID,
         tag_uuids=[TAG_UUID],
     )
 
     push = await client.post(
         "/sync",
-        json={"projects": [project_payload()], "sections": [section], "tags": [tag], "tasks": [task]},
+        json={"projects": [project_payload()], "tags": [tag], "tasks": [task]},
         headers=auth(token),
     )
     assert push.status_code == 200, push.text
-    assert push.json()["applied"] == 4
+    assert push.json()["applied"] == 3
 
     pull = (await client.get("/sync?since=0", headers=auth(token, "device-b"))).json()
-    assert len(pull["sections"]) == 1 and pull["sections"][0]["name"] == "Backlog"
-    assert pull["sections"][0]["project_uuid"] == PROJECT_UUID
     assert len(pull["tags"]) == 1 and pull["tags"][0]["name"] == "errand"
     out = pull["tasks"][0]
     assert out["sort_order"] == 5
     assert out["recurrence_rule"] == "weekly;weekday=2"
     assert out["checklist"].startswith("[{")
-    assert out["section_uuid"] == SECTION_UUID
     assert out["tag_uuids"] == [TAG_UUID]
 
-    # LWW applies to sections too: older update is rejected as a conflict.
-    stale = dict(section, name="Renamed", updated_at="2026-08-17T08:00:00Z")
-    conflict = (await client.post("/sync", json={"sections": [stale]}, headers=auth(token))).json()
+    # LWW applies to tags too: older update is rejected as a conflict.
+    stale = dict(tag, name="renamed", updated_at="2026-08-17T08:00:00Z")
+    conflict = (await client.post("/sync", json={"tags": [stale]}, headers=auth(token))).json()
     assert conflict["applied"] == 0
-    assert conflict["conflicts"]["sections"][0]["name"] == "Backlog"
+    assert conflict["conflicts"]["tags"][0]["name"] == "errand"

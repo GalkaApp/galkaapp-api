@@ -42,16 +42,7 @@ class ProjectPayload(BaseModel):
     name: str
     color_key: str = "blue"
     sort_order: int = 0
-    created_at: NaiveUTC
-    updated_at: NaiveUTC
-    deleted: bool = False
-
-
-class SectionPayload(BaseModel):
-    uuid: UUID
-    project_uuid: UUID | None = None
-    name: str
-    sort_order: int = 0
+    archived_at: NaiveUTC | None = None
     created_at: NaiveUTC
     updated_at: NaiveUTC
     deleted: bool = False
@@ -78,10 +69,13 @@ class TaskPayload(BaseModel):
     reminder_date: NaiveUTC | None = None
     trashed_at: NaiveUTC | None = None
     sort_order: int = 0
+    day_order: int = 0
     recurrence_rule: str | None = None
     checklist: str = ""
+    is_evening: bool = False
+    duration_minutes: int = Field(default=0, ge=0)
+    board_status: str = Field(default="todo", max_length=16)
     project_uuid: UUID | None = None
-    section_uuid: UUID | None = None
     tag_uuids: list[UUID] = []
     created_at: NaiveUTC
     updated_at: NaiveUTC
@@ -101,12 +95,6 @@ class LogPayload(BaseModel):
 
 
 class ProjectOut(ProjectPayload):
-    seq: int
-
-    model_config = {"from_attributes": True}
-
-
-class SectionOut(SectionPayload):
     seq: int
 
     model_config = {"from_attributes": True}
@@ -134,7 +122,6 @@ class LogOut(LogPayload):
 
 class SyncPushRequest(BaseModel):
     projects: list[ProjectPayload] = []
-    sections: list[SectionPayload] = []
     tags: list[TagPayload] = []
     tasks: list[TaskPayload] = []
     logs: list[LogPayload] = []
@@ -144,7 +131,6 @@ class SyncConflicts(BaseModel):
     """Server-side versions that were newer than the pushed ones (server wins)."""
 
     projects: list[ProjectOut] = []
-    sections: list[SectionOut] = []
     tags: list[TagOut] = []
     tasks: list[TaskOut] = []
     logs: list[LogOut] = []
@@ -159,7 +145,6 @@ class SyncPushResponse(BaseModel):
 class SyncPullResponse(BaseModel):
     seq: int
     projects: list[ProjectOut]
-    sections: list[SectionOut]
     tags: list[TagOut]
     tasks: list[TaskOut]
     logs: list[LogOut] = []

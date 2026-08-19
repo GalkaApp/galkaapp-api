@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from app.config import settings
 from app.db import Database
 from app.events import EventBus, RedisEventBus
-from app.routers import admin, auth, events, logs, sync, trash
+from app.routers import admin, auth, events, logs, signup, sync, trash
 
 
 def create_app(database_url: str | None = None, bus: EventBus | None = None) -> FastAPI:
@@ -28,6 +28,7 @@ def create_app(database_url: str | None = None, bus: EventBus | None = None) -> 
     app.include_router(trash.router)
     app.include_router(logs.router)
     app.include_router(admin.router)
+    app.include_router(signup.router)
 
     @app.get("/health")
     async def health():

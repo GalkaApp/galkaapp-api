@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if created %}Account created{% else %}Create your Galka account{% endif %}</title>
+<style>
+  body { margin: 0; background: #FBFBFA; color: #1C1C1B;
+         font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+         display: flex; min-height: 100vh; }
+  main { margin: auto; width: 100%; max-width: 380px; padding: 32px 24px; }
+  .card { background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: 12px;
+          padding: 28px 26px; }
+  h1 { font-size: 20px; letter-spacing: -.01em; margin: 0 0 6px; }
+  .sub { color: #757572; font-size: 13px; margin: 0 0 22px; }
+  label { display: block; font-size: 11px; font-weight: 600; color: #ABABA8;
+          text-transform: uppercase; letter-spacing: .04em; margin: 0 0 5px; }
+  input { width: 100%; box-sizing: border-box; font: inherit; padding: 9px 10px;
+          border: 1px solid rgba(0,0,0,.14); border-radius: 8px; background: #FBFBFA; }
+  input:focus { outline: none; border-color: #3B6FE0; background: #fff; }
+  .field { margin-bottom: 14px; }
+  button { width: 100%; margin-top: 8px; font: inherit; font-weight: 600; color: #fff;
+           background: #3B6FE0; border: none; border-radius: 8px; padding: 10px;
+           cursor: pointer; }
+  button:hover { background: #2B55B8; }
+  .error { background: rgba(192,104,94,.12); color: #A3564D; font-size: 13px;
+           border-radius: 8px; padding: 9px 11px; margin: 0 0 16px; }
+  .hint { color: #ABABA8; font-size: 12px; margin: 6px 0 0; }
+  .done { color: #3E7D58; font-size: 13px; background: rgba(78,156,110,.12);
+          border-radius: 8px; padding: 11px 13px; margin: 0 0 16px; }
+  .steps { color: #757572; font-size: 13px; margin: 0; padding-left: 18px; }
+  .steps li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+  {% if created %}
+    <h1>Account created</h1>
+    <p class="sub">{{ email }}</p>
+    <p class="done">You can sign in from the app now.</p>
+    <ol class="steps">
+      <li>Open Galka and go to Settings.</li>
+      <li>Choose Sign in under Account.</li>
+      <li>Enter this server's address, your email and password.</li>
+    </ol>
+  {% else %}
+    <h1>Create your Galka account</h1>
+    <p class="sub">One account syncs your tasks across every device.</p>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <form method="post" action="/signup">
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email"
+               value="{{ email or '' }}" required autofocus>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password"
+               autocomplete="new-password" minlength="6" maxlength="72" required>
+        <p class="hint">At least 6 characters.</p>
+      </div>
+      <div class="field">
+        <label for="password_confirm">Repeat password</label>
+        <input id="password_confirm" name="password_confirm" type="password"
+               autocomplete="new-password" minlength="6" maxlength="72" required>
+      </div>
+      <button type="submit">Create account</button>
+    </form>
+  {% endif %}
+  </div>
+</main>
+</body>
+</html>

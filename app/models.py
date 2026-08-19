@@ -42,21 +42,9 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(255))
     color_key: Mapped[str] = mapped_column(String(32), default="blue")
     sort_order: Mapped[int] = mapped_column(default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime)
-    updated_at: Mapped[datetime] = mapped_column(DateTime)
-    deleted: Mapped[bool] = mapped_column(default=False)
-    seq: Mapped[int] = mapped_column(BigInteger, index=True)
-
-
-class Section(Base):
-    __tablename__ = "sections"
-
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
-    uuid: Mapped[uuid_lib.UUID] = mapped_column(Uuid, primary_key=True)
-    # Loose reference by uuid — the project may sync in a later batch.
-    project_uuid: Mapped[uuid_lib.UUID | None] = mapped_column(Uuid, nullable=True)
-    name: Mapped[str] = mapped_column(String(255))
-    sort_order: Mapped[int] = mapped_column(default=0)
+    # Non-null while the project is archived: it keeps every task but drops
+    # out of the sidebar and out of the cross-project screens.
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
     deleted: Mapped[bool] = mapped_column(default=False)
@@ -92,12 +80,20 @@ class Task(Base):
     # Non-null while the task sits in the Trash (soft delete, still restorable).
     trashed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     sort_order: Mapped[int] = mapped_column(default=0)
+    # Manual position within a day on the Upcoming screen (Todoist's day_order).
+    day_order: Mapped[int] = mapped_column(default=0)
     # Opaque client-side blobs: recurrence rule string and checklist JSON.
     recurrence_rule: Mapped[str | None] = mapped_column(String(255), nullable=True)
     checklist: Mapped[str] = mapped_column(Text, default="")
+    # Things-style evening block: the task sits under "This Evening" on its day.
+    is_evening: Mapped[bool] = mapped_column(default=False)
+    # Time blocking: expected length in minutes, 0 = unestimated.
+    duration_minutes: Mapped[int] = mapped_column(default=0)
+    # Kanban column on the project board: "todo" | "doing" (done is derived
+    # from is_completed, so it is never stored).
+    board_status: Mapped[str] = mapped_column(String(16), default="todo")
     # Loose references by uuid — the referenced rows may sync in a later batch.
     project_uuid: Mapped[uuid_lib.UUID | None] = mapped_column(Uuid, nullable=True)
-    section_uuid: Mapped[uuid_lib.UUID | None] = mapped_column(Uuid, nullable=True)
     tag_uuids: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)

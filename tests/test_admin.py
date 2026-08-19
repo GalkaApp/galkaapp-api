@@ -1,13 +1,14 @@
 import uuid
 
+from app.config import settings
 from tests.conftest import auth, register
 
-ADMIN = ("admin", "admin")
+ADMIN = (settings.admin_username, settings.admin_password)
 
 
 async def test_admin_requires_basic_auth(client):
     assert (await client.get("/admin")).status_code == 401
-    assert (await client.get("/admin", auth=("admin", "wrong"))).status_code == 401
+    assert (await client.get("/admin", auth=(settings.admin_username, "wrong"))).status_code == 401
 
 
 async def test_admin_overview_and_user_page(client):

@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta
 
 from tests.conftest import auth, register
 
@@ -166,9 +167,13 @@ async def test_delete_wins_over_a_sub_second_server_roll(client):
     )
     assert rejected.json()["conflicts"]["tasks"], "whole seconds still lose — hence ms on the wire"
 
+    # A hair later than the roll, still inside the same second: with
+    # milliseconds on the wire the delete wins. Derived from the server's own
+    # stamp rather than a literal, so the test does not rot as the clock moves.
+    later = (datetime.fromisoformat(server_stamp) + timedelta(milliseconds=250)).isoformat() + "Z"
     accepted = await client.post(
         "/sync",
-        json={"tasks": [task_payload("2026-08-18T09:00:00.250Z", deleted=True)]},
+        json={"tasks": [task_payload(later, deleted=True)]},
         headers=auth(token),
     )
     assert accepted.json()["conflicts"]["tasks"] == []
