@@ -170,3 +170,7 @@ app/
 
 Notes: schema is created on startup (`create_all`) — introduce Alembic before the first
 breaking schema change. Tokens are opaque and revocable (one per device login).
+
+## License
+
+MIT — see [LICENSE](LICENSE). The name Galka and the app icon are not covered by it.
