@@ -1,0 +1,132 @@
+{% extends "public/base.html" %}
+{% block title %}Galka — tasks, projects, and a plan{% endblock %}
+
+{% block style %}
+  /* Top and bottom only; the shorthand would drop .wrap's side padding. */
+  .hero { padding-top: 72px; padding-bottom: 12px; text-align: center; }
+  .hero img.icon { width: 96px; height: 96px; border-radius: 21px; display: block;
+                   margin: 0 auto 22px; box-shadow: 0 8px 26px rgba(0,0,0,.14); }
+  .hero .lead { max-width: 560px; margin: 0 auto 28px; }
+  .actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+  .btn { display: inline-block; font-weight: 600; font-size: 15px; padding: 11px 22px;
+         border-radius: 10px; border: 1px solid transparent; }
+  .btn.primary { background: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { background: var(--accent-dark); color: var(--on-accent); }
+  .btn.ghost { border-color: var(--line); color: var(--text); background: var(--panel); }
+  .btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .platforms { color: var(--faint); font-size: 13.5px; margin-top: 18px; }
+
+  .quickadd { max-width: 620px; margin: 52px auto 0; background: var(--panel);
+              border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px;
+              text-align: left; }
+  .quickadd .typed { font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+                     color: var(--text); word-break: break-word; }
+  .quickadd .typed b { font-weight: 600; color: var(--accent); }
+  .quickadd .parsed { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { font-size: 12.5px; padding: 3px 10px; border-radius: 20px;
+          background: var(--raised); color: var(--muted); }
+  .quickadd .cap { color: var(--faint); font-size: 12.5px; margin: 12px 0 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px 30px;
+          margin: 18px 0 0; }
+  .grid section { min-width: 0; }
+  .grid h3 { margin: 0 0 4px; font-size: 15.5px; }
+  .grid p { color: var(--muted); font-size: 14.5px; margin: 0; }
+  .grid .k { display: block; font-size: 11px; font-weight: 600; color: var(--faint);
+             text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+
+  .note { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+          padding: 20px 22px; margin-top: 22px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note .badge { display: inline-block; font-size: 11px; font-weight: 600;
+                 letter-spacing: .05em; text-transform: uppercase; color: var(--green);
+                 background: rgba(78,156,110,.14); border-radius: 20px;
+                 padding: 2px 10px; margin-bottom: 10px; }
+  hr.rule { border: none; border-top: 1px solid var(--line); margin: 46px 0 0; }
+  @media (max-width: 620px) { .grid { grid-template-columns: 1fr; gap: 20px; } }
+{% endblock %}
+
+{% block content %}
+<div class="wrap hero">
+  <img class="icon" src="/static/icon.png" alt="Galka" width="96" height="96">
+  <h1>Tasks, projects, and a plan</h1>
+  <p class="lead">Galka lays the day out plainly on the Mac, the iPhone and the iPad —
+     and keeps every device in step.</p>
+  <div class="actions">
+    {% if app_store_url %}<a class="btn primary" href="{{ app_store_url }}">Get Galka</a>{% endif %}
+    <a class="btn {{ 'ghost' if app_store_url else 'primary' }}" href="/signup">Create a sync account</a>
+    <a class="btn ghost" href="/support">Support</a>
+  </div>
+  <p class="platforms">macOS 14 or later · iOS and iPadOS 17 or later · English and Russian</p>
+
+  <div class="quickadd">
+    <div class="typed">Call the bank <b>tomorrow 3pm</b> <b>@Work</b> <b>!high</b> <b>#urgent</b></div>
+    <div class="parsed">
+      <span class="chip">Due tomorrow, 15:00</span>
+      <span class="chip">Project · Work</span>
+      <span class="chip">Priority · High</span>
+      <span class="chip">#urgent</span>
+    </div>
+    <p class="cap">One line in, every field filled. Dates parse in English and Russian.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="wrap" id="features">
+  <h2>What it does</h2>
+  <div class="grid">
+    <section>
+      <span class="k">Plan the day</span>
+      <h3>Today knows about your evening</h3>
+      <p>Inbox, Today, Upcoming, Someday and a Logbook. Anything overdue is called out
+         at the top, and one tap moves all of it forward.</p>
+    </section>
+    <section>
+      <span class="k">Capture</span>
+      <h3>A task in one line</h3>
+      <p>Type the date, the project, the priority and the tags straight into the title.
+         On the Mac a global hotkey opens the composer over whatever you were doing.</p>
+    </section>
+    <section>
+      <span class="k">Organise</span>
+      <h3>Projects that hold their shape</h3>
+      <p>Sections, tags, priorities, Markdown notes, checklists and duration estimates.
+         Repeating tasks from daily to a custom rule.</p>
+    </section>
+    <section>
+      <span class="k">Mac</span>
+      <h3>A board when a list isn't enough</h3>
+      <p>Any project switches to a kanban board — To Do, In Progress, Done — with drag
+         and drop, plus a menu bar mode and launch at login.</p>
+    </section>
+    <section>
+      <span class="k">Review</span>
+      <h3>See where the time went</h3>
+      <p>The Logbook keeps every completion. Stats show the day, the week, the month,
+         your current streak and your best run.</p>
+    </section>
+    <section>
+      <span class="k">Everywhere</span>
+      <h3>Widgets, reminders, themes</h3>
+      <p>Home Screen and desktop widgets with today's list and a quick add button.
+         Reminders fire ahead of a due time. Light and dark, English and Russian.</p>
+    </section>
+  </div>
+
+  <h2>Sync, if you want it</h2>
+  <div class="note">
+    <span class="badge">No account required</span>
+    <p>Galka works entirely offline on a single device — nothing is sent anywhere until
+       you sign in. Create an account and your tasks, projects and history sync between
+       your own Mac, iPhone and iPad, offline edits included.</p>
+    <p>Your tasks are yours: they are never sold, never shared, and never used for
+       advertising. Delete the account and everything in it goes with it. See the
+       <a href="/privacy">privacy policy</a> for the detail.</p>
+  </div>
+
+  <h2>Moving in from another app?</h2>
+  <p>On the Mac, Galka imports projects, to-dos, notes, checklists, tags, dates and
+     repeat rules from your existing task app in a few clicks — Settings ▸ Data ▸ Import.</p>
+</div>
+{% endblock %}

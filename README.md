@@ -42,6 +42,15 @@ applied change gets a new seq, and clients keep the last seq they have seen as t
 | `POST /trash/empty` | tombstones every trashed task and writes a `trash_emptied` log entry |
 | `GET /logs?limit=&action=` | activity history, newest first |
 
+Beyond the API the server renders four public pages — `/` (landing), `/privacy`,
+`/terms` and `/support` — plus `/signup` and `/admin`. They are excluded from the OpenAPI
+schema so the Swift type generator never sees them. `/privacy` and `/support` are the URLs
+the App Store listing has to point at. The owner name, contact address, public URL and
+App Store link are settings (`TODOAPI_OWNER_NAME`, `TODOAPI_CONTACT_EMAIL`,
+`TODOAPI_PUBLIC_URL`, `TODOAPI_APP_STORE_URL`); the store button is hidden while the last
+one is empty. The date on the policies is the `POLICY_UPDATED` constant in
+`app/routers/pages.py` — bump it when the text changes.
+
 Client loop per device:
 
 1. On launch/reconnect: `GET /sync?since=<cursor>` → apply, store new `seq` as cursor.

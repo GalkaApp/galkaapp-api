@@ -1,0 +1,64 @@
+{% extends "public/doc.html" %}
+{% block title %}Support — Galka{% endblock %}
+{% block description %}Help with Galka: contact, common questions about sync, accounts and reminders.{% endblock %}
+{% block heading %}Support{% endblock %}
+
+{% block doc %}
+<div class="callout">
+  <p>Something broken, or something missing? Write to
+     <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> and you will get an answer
+     within a few working days. Say which device and which version of Galka you are on —
+     Settings ▸ About shows both.</p>
+</div>
+
+<h2>Getting started</h2>
+<ul>
+  <li><strong>You do not need an account.</strong> Install the app and start typing;
+      everything except sync works offline on one device.</li>
+  <li><strong>To sync,</strong> <a href="/signup">create an account</a> here, then in the
+      app open Settings ▸ Account ▸ Sign in and enter the server address, your email and
+      your password.</li>
+  <li><strong>Quick Add</strong> reads the title as you type: <code>tomorrow 3pm</code> sets
+      the date, <code>@Work</code> the project, <code>!high</code> the priority and
+      <code>#urgent</code> a tag. English and Russian both work.</li>
+</ul>
+
+<h2>Common questions</h2>
+
+<h3>My devices are not syncing</h3>
+<p>Check that both are signed in to the same account, and that the server address in
+   Settings ▸ Account matches on both — a device that was set up against a local server
+   keeps that address until you change it. Changes are pushed a couple of seconds after you
+   stop typing; pull to refresh the list to force a sync.</p>
+
+<h3>Two devices edited the same task</h3>
+<p>The most recent edit wins, and the other devices take it. Nothing is silently merged
+   field by field, so if a task looks out of date on one device, it was edited later
+   somewhere else.</p>
+
+<h3>I deleted something by accident</h3>
+<p>Deleted tasks go to the Trash and stay there until you empty it. Restore is per item, or
+   restore the lot. Once the Trash is emptied the tasks are gone on every device.</p>
+
+<h3>Reminders are not arriving</h3>
+<p>Reminders are scheduled by the system on the device, so they need notification
+   permission — check the system settings for Galka. A reminder fires at the lead time you
+   set in Settings, ahead of the due time.</p>
+
+<h3>I forgot my password</h3>
+<p>Write to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> from the address
+   the account uses and we will reset it. Your tasks stay on your devices while you wait.</p>
+
+<h3>I want my data, or I want the account gone</h3>
+<p>Ask at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> from the account's
+   address. An export comes back in a machine-readable format; a deletion removes the
+   account and its content within 30 days. See the <a href="/privacy">privacy policy</a>.</p>
+
+<h3>Can I run my own server?</h3>
+<p>Yes — the server address in Settings ▸ Account is editable, and the sync API is
+   documented. Data on a server you run is yours alone.</p>
+
+<h2>Requirements</h2>
+<p>macOS 14 or later, iOS and iPadOS 17 or later. The app is in English and Russian, and
+   the language can be switched inside the app without changing the system language.</p>
+{% endblock %}

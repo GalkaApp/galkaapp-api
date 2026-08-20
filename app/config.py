@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     admin_username: str = "admin"
     admin_password: str = "admin"
 
+    # Shown on the public pages (landing, privacy, terms, support).
+    owner_name: str = "Andrey Fanyagin"
+    contact_email: str = "support@getgalka.ru"
+    public_url: str = "https://api.getgalka.ru"
+    app_store_url: str = ""  # empty until the app is on the store; hides the button
+
     model_config = {"env_prefix": "TODOAPI_"}
 
 

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/static/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<title>{% block title %}Galka{% endblock %}</title>
+<meta name="description" content="{% block description %}Galka is a task manager for the Mac, iPhone and iPad — a plain plan for the day, projects that keep their shape, and sync over your own account.{% endblock %}">
+<style>
+  :root {
+    --bg: #FBFBFA; --panel: #fff; --raised: #F4F4F2; --text: #1C1C1B;
+    --muted: #757572; --faint: #ABABA8; --line: rgba(0,0,0,.08);
+    --accent: #3B6FE0; --accent-dark: #2B55B8; --green: #3E7D58;
+      /* Ink on an accent-filled button: white on the dark blue, dark on the
+         lighter blue dark mode needs, so the label stays readable in both. */
+      --on-accent: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171716; --panel: #201F1E; --raised: #262524; --text: #EDEDEA;
+      --muted: #A3A29E; --faint: #7A7975; --line: rgba(255,255,255,.10);
+      --accent: #7AA0F2; --accent-dark: #A8C1F7; --green: #6FBF8E;
+      --on-accent: #16223B;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+         -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent-dark); }
+  /* One width for the header, the footer and every page body, so the brand,
+     the text column and the footer links all sit on the same two edges. */
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+  header.site { border-bottom: 1px solid var(--line); background: var(--bg);
+                position: sticky; top: 0; z-index: 5; }
+  header.site .wrap { display: flex; align-items: center; gap: 20px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700;
+           font-size: 16px; color: var(--text); letter-spacing: -.01em; }
+  .brand img { width: 28px; height: 28px; display: block; border-radius: 6px; }
+  header.site nav { margin-left: auto; display: flex; align-items: center; gap: 18px;
+                    font-size: 14px; }
+  header.site nav a { color: var(--muted); }
+  header.site nav a:hover { color: var(--text); }
+  header.site nav a.cta { color: var(--on-accent); background: var(--accent);
+                          padding: 6px 14px; border-radius: 8px; font-weight: 600; }
+  header.site nav a.cta:hover { background: var(--accent-dark); color: var(--on-accent); }
+
+  main { padding: 0 0 64px; }
+  h1 { font-size: 34px; line-height: 1.2; letter-spacing: -.02em; margin: 0 0 12px; }
+  h2 { font-size: 20px; letter-spacing: -.01em; margin: 36px 0 10px; }
+  h3 { font-size: 15px; margin: 22px 0 6px; }
+  p { margin: 0 0 14px; }
+  .lead { font-size: 18px; color: var(--muted); margin: 0 0 26px; }
+
+  footer.site { border-top: 1px solid var(--line); padding: 26px 0 44px;
+                color: var(--faint); font-size: 13.5px; }
+  footer.site .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+  footer.site a { color: var(--muted); }
+  footer.site a:hover { color: var(--text); }
+  footer.site .spacer { margin-left: auto; }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 27px; }
+    header.site nav { gap: 14px; font-size: 13.5px; }
+    header.site nav a.hide-s { display: none; }
+  }
+{% block style %}{% endblock %}
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/static/icon.png" alt="" width="28" height="28">Galka</a>
+    <nav>
+      <a class="hide-s" href="/#features">Features</a>
+      <a class="hide-s" href="/support">Support</a>
+      <a class="cta" href="/signup">Create account</a>
+    </nav>
+  </div>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer class="site">
+  <div class="wrap">
+    <span>© {{ year }} {{ owner }}</span>
+    <span class="spacer"></span>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/support">Support</a>
+    <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+  </div>
+</footer>
+</body>
+</html>

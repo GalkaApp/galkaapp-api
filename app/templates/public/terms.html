@@ -1,0 +1,85 @@
+{% extends "public/doc.html" %}
+{% block title %}Terms of Use — Galka{% endblock %}
+{% block description %}The terms that apply to the Galka app and its sync service.{% endblock %}
+{% block heading %}Terms of Use{% endblock %}
+
+{% block doc %}
+<p>These terms are the agreement between you and {{ owner }} (“we”, “us”) covering the
+   Galka app and the sync service at <code>{{ server_host }}</code>. Installing the app or
+   creating an account means you accept them. If you do not, do not use the service.</p>
+
+<h2>The service</h2>
+<p>Galka is a task manager for macOS, iOS and iPadOS. The app works on its own, storing
+   your data on your device. The sync service is optional: signing in copies your tasks
+   between your own devices through our server.</p>
+
+<h2>Your account</h2>
+<ul>
+  <li>You need a working email address and a password of at least six characters. One
+      account is for one person; do not share it.</li>
+  <li>Keep your password to yourself. You are responsible for what happens under your
+      account, so tell us at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+      if you think someone else has access to it.</li>
+  <li>You must be old enough to enter a contract where you live, and at least 13.</li>
+  <li>You can close your account at any time by writing to us. We can suspend or close an
+      account that breaks these terms, that is used to attack or abuse the service, or that
+      we are required by law to close — with notice where it is reasonable to give it.</li>
+</ul>
+
+<h2>Your content</h2>
+<p>Your tasks are yours. We claim no ownership of them, and we only store, transmit and
+   reproduce them to the extent needed to run sync for you and to keep backups. You are
+   responsible for what you put into the app and for having the right to store it.</p>
+<p>Keep your own copies of anything you cannot afford to lose. The app holds a full local
+   copy on each device, which is the practical backup.</p>
+
+<h2>Acceptable use</h2>
+<p>Do not use the service to store or distribute unlawful material; do not try to break
+   into, overload, probe or disrupt it; do not attempt to reach another user's data; do not
+   resell access to it. Automated clients must respect the published API and reasonable
+   rate limits. We may set limits on storage, request rates and account size to keep the
+   service healthy for everyone.</p>
+
+<h2>Price and availability</h2>
+<p>Any price for the app itself is shown by the App Store, and purchases through the App
+   Store are governed by Apple's terms — refunds are handled by Apple. The sync service is
+   currently offered at no charge. It is provided on a best-effort basis, with no uptime
+   guarantee, and it may be changed, interrupted for maintenance, or discontinued. If we
+   discontinue it we will give reasonable notice by email so you can export your data;
+   your data stays available in the app on your devices either way.</p>
+
+<h2>Software licence</h2>
+<p>We grant you a personal, non-exclusive, non-transferable licence to use the app on
+   devices you own or control, as permitted by the App Store terms. You may not reverse
+   engineer, decompile, redistribute or resell the app except where the law says such a
+   restriction cannot apply.</p>
+
+<h2>Running your own server</h2>
+<p>The app can be pointed at a different sync server. If you do that, these terms cover
+   only the app; the operator of that server is responsible for the service and your data
+   on it.</p>
+
+<h2>Disclaimer and liability</h2>
+<p>The service is provided “as is” and “as available”, without warranties of any kind, to
+   the fullest extent the law allows. We do not promise that it will be uninterrupted,
+   error-free, or that no data will ever be lost.</p>
+<p>To the extent the law allows, we are not liable for indirect, incidental or
+   consequential losses, for lost profits, or for lost or corrupted data; and our total
+   liability arising out of the service is limited to the amount you paid us for it in the
+   twelve months before the claim. Nothing here excludes liability that cannot legally be
+   excluded, and consumer rights you have under the law of your country are not affected.</p>
+
+<h2>Changes to these terms</h2>
+<p>We may update these terms. The date at the top changes, and material changes are
+   announced by email to the address on your account. If you keep using the service after
+   an update, the new terms apply; if you do not agree, close your account.</p>
+
+<h2>Apple</h2>
+<p>Apple is not a party to these terms and has no responsibility for the app or its
+   support. Apple and its subsidiaries are third-party beneficiaries of these terms and may
+   enforce them against you.</p>
+
+<h2>Contact</h2>
+<p>{{ owner }} — <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.
+   See also the <a href="/privacy">privacy policy</a>.</p>
+{% endblock %}

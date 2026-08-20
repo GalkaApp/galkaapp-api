@@ -1,0 +1,32 @@
+{% extends "public/base.html" %}
+
+{% block style %}
+  /* Padding-top only: the shorthand would drop .wrap's side padding. */
+  .doc { padding-top: 44px; }
+  .doc h1 { font-size: 30px; margin-bottom: 6px; }
+  .doc .updated { color: var(--faint); font-size: 13.5px; margin: 0 0 30px; }
+  .doc h2 { font-size: 18px; margin: 34px 0 8px; }
+  .doc p, .doc li { color: var(--text); font-size: 15.5px; }
+  .doc ul { margin: 0 0 14px; padding-left: 22px; }
+  .doc li { margin-bottom: 6px; }
+  .doc li > strong { font-weight: 600; }
+  .doc table { border-collapse: collapse; width: 100%; background: var(--panel);
+               border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+               margin: 0 0 16px; }
+  .doc th, .doc td { text-align: left; padding: 9px 13px; font-size: 14.5px;
+                     border-bottom: 1px solid var(--line); vertical-align: top; }
+  .doc th { background: var(--raised); font-size: 11.5px; font-weight: 600;
+            color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .callout { background: var(--panel); border: 1px solid var(--line);
+                  border-radius: 10px; padding: 16px 18px; margin: 0 0 16px; }
+  .doc .callout p:last-child { margin-bottom: 0; }
+{% endblock %}
+
+{% block content %}
+<div class="wrap doc">
+  <h1>{% block heading %}{% endblock %}</h1>
+  {% if updated %}<p class="updated">Last updated {{ updated }}</p>{% endif %}
+  {% block doc %}{% endblock %}
+</div>
+{% endblock %}

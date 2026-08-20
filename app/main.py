@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.db import Database
 from app.events import EventBus, RedisEventBus
-from app.routers import admin, auth, events, logs, signup, sync, trash
+from app.routers import admin, auth, events, logs, pages, signup, sync, trash
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -34,7 +34,8 @@ def create_app(database_url: str | None = None, bus: EventBus | None = None) -> 
     app.include_router(logs.router)
     app.include_router(admin.router)
     app.include_router(signup.router)
-    # App icon, shared by the signup and admin pages.
+    app.include_router(pages.router)
+    # App icon, shared by the public, signup and admin pages.
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     @app.get("/health")
