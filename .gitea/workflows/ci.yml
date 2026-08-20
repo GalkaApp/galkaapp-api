@@ -11,6 +11,9 @@ on:
 env:
   REGISTRY: git.home.fanyagin.ru
   IMAGE: git.home.fanyagin.ru/galka/galka-api
+  # The public mirror. Nothing deploys from it — it exists so the image can be
+  # pulled without an account on the private registry.
+  DOCKERHUB_IMAGE: skymanrm/galkaapp-api
 
 # One deploy at a time, and never a half-applied one — a push that lands mid-run
 # waits rather than cancelling.
@@ -67,6 +70,33 @@ jobs:
       # in-memory sqlite with the in-memory event bus.
       - name: Test
         run: docker run --rm ${{ env.IMAGE }}:${{ needs.build.outputs.tag }} pytest -q
+
+  # Separate from deploy on purpose: mirroring is not on the path to production,
+  # so a Docker Hub outage or an expired token must not hold back the rollout.
+  dockerhub:
+    needs: [build, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.ACCESSTOKEN }}
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Copies the manifest the tests ran against straight across — no pull, no
+      # rebuild — so the public image is byte-identical to the deployed one.
+      - name: Mirror the tested image
+        run: |
+          docker buildx imagetools create \
+            --tag "$DOCKERHUB_IMAGE:${{ needs.build.outputs.tag }}" \
+            --tag "$DOCKERHUB_IMAGE:latest" \
+            "$IMAGE:${{ needs.build.outputs.tag }}"
 
   deploy:
     needs: [build, test]

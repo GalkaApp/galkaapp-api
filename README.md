@@ -116,20 +116,26 @@ The image pull is the one step that still runs against the remote daemon over a
 `docker context`, so the registry credentials travel with the request from whoever
 deploys and the server itself needs no registry login.
 
-CI is Gitea Actions (`.gitea/workflows/ci.yml`), three jobs on every push to `main`:
+CI is Gitea Actions (`.gitea/workflows/ci.yml`), four jobs on every push to `main`:
 
 1. **build** — builds the image and pushes it as `:sha-<12>`, an immutable tag.
 2. **test** — runs `pytest` *inside that image*, so what deploys is what passed.
 3. **deploy** — retags the tested manifest as `:main`, pulls it onto the server
    through a `docker context`, copies `docker-compose.yml` to `/var/galka`, and runs
    `docker compose up -d` there over SSH.
+4. **dockerhub** — copies the same tested manifest to the public mirror
+   `skymanrm/galkaapp-api` as `:sha-<12>` and `:latest`. It runs beside `deploy`
+   rather than before it: nothing deploys from Docker Hub, so a failure there must
+   not hold back the rollout.
 
 Only the deploy job publishes `:main`, so a build that fails the tests never
 becomes the tag Compose pulls. Rolling back is editing `/var/galka/docker-compose.yml`
 to pin `image:` at an older `:sha-` tag and running `docker compose up -d` there.
 
 CI secrets live on the `galka` **organisation** in Gitea (Settings → Actions → Secrets):
-`ACCESSTOKEN` (registry push), `DEPLOY_HOST`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`.
+`ACCESSTOKEN` (registry push), `DEPLOY_HOST`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`,
+`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token with write
+access to `skymanrm/galkaapp-api`).
 None of them is a production runtime secret — those are only in `/var/galka/.env`, so
 CI can deploy without ever holding the database or admin password.
 
