@@ -1,4 +1,4 @@
-"""The public pages: landing, privacy, terms, support.
+"""The public pages: landing, privacy, terms, support, self-hosting.
 
 The App Store listing links to the privacy and support URLs, so these must
 resolve without an account and without touching the database.
@@ -7,7 +7,7 @@ resolve without an account and without touching the database.
 import pytest
 
 
-PUBLIC_PATHS = ["/", "/privacy", "/terms", "/support"]
+PUBLIC_PATHS = ["/", "/privacy", "/terms", "/support", "/self-hosting"]
 
 
 @pytest.mark.parametrize("path", PUBLIC_PATHS)
@@ -61,6 +61,28 @@ async def test_terms_name_the_operator_and_the_contact(client):
     assert "Terms of Use" in body
     assert "Andrey Fanyagin" in body
     assert "support@getgalka.ru" in body
+
+
+async def test_self_hosting_points_at_the_image_and_the_source(client):
+    """The two things a self-hoster needs before anything else."""
+    body = (await client.get("/self-hosting")).text
+    assert "https://github.com/GalkaApp/galkaapp-api" in body
+    assert "https://hub.docker.com/r/skymanrm/galkaapp-api" in body
+    # The compose snippet has to name the image people can actually pull.
+    assert "skymanrm/galkaapp-api:latest" in body
+
+
+async def test_self_hosting_covers_the_setup_a_run_needs(client):
+    body = (await client.get("/self-hosting")).text
+    for claim in ["TODOAPI_DATABASE_URL", "TODOAPI_ADMIN_PASSWORD", "docker compose up -d",
+                  "pg_dump", "Settings \u25b8 Account \u25b8 Sign in"]:
+        assert claim in body, f"self-hosting page does not mention {claim!r}"
+
+
+async def test_every_page_links_to_the_self_hosting_guide(client):
+    """It is reachable from the footer, so no page is a dead end for it."""
+    for path in PUBLIC_PATHS:
+        assert 'href="/self-hosting"' in (await client.get(path)).text
 
 
 async def test_signup_links_back_to_the_legal_pages(client):

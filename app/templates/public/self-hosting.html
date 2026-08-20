@@ -1,0 +1,209 @@
+{% extends "public/doc.html" %}
+{% block title %}Self-hosting — Galka{% endblock %}
+{% block description %}Run your own Galka sync server: a Docker image, a compose file, and the settings the app needs to point at it.{% endblock %}
+{% block heading %}Self-hosting{% endblock %}
+
+{% block style %}
+{{ super() }}
+  .doc pre { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+             padding: 14px 16px; margin: 0 0 16px; overflow-x: auto;
+             font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+             color: var(--text); }
+  .doc code { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+              background: var(--raised); border-radius: 5px; padding: 1px 5px; }
+  .doc pre code { background: none; padding: 0; font-size: inherit; }
+  .doc .links { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 22px; }
+  .doc .links a { display: inline-block; font-size: 14px; font-weight: 600;
+                  padding: 9px 16px; border-radius: 9px; background: var(--panel);
+                  border: 1px solid var(--line); color: var(--text); }
+  .doc .links a:hover { border-color: var(--accent); color: var(--accent); }
+  .doc .step { color: var(--faint); font-size: 11.5px; font-weight: 600;
+               letter-spacing: .05em; text-transform: uppercase; margin: 30px 0 0; }
+{% endblock %}
+
+{% block doc %}
+<p class="lead">The Galka sync server is open source and published as a Docker image.
+   Run it on your own machine and your tasks never leave it — the app talks to your
+   address instead of {{ server_host }}, and nothing else changes.</p>
+
+<div class="links">
+  <a href="{{ source_url }}">Source on GitHub</a>
+  <a href="https://hub.docker.com/r/{{ docker_image }}">Image on Docker Hub</a>
+  <a href="{{ source_url }}#readme">README</a>
+</div>
+
+<div class="callout">
+  <p><strong>What you need:</strong> a host with Docker and Docker Compose, about 512 MB
+     of RAM, and — if the app will reach it over the internet — a domain name pointing at
+     the host so it can hold a TLS certificate. Everything else the stack brings with it:
+     PostgreSQL for storage and Redis for the realtime channel behind
+     <code>/events</code>.</p>
+</div>
+
+<h2>What it is</h2>
+<ul>
+  <li><strong>The whole backend, nothing else.</strong> Accounts, the sync protocol,
+      the Trash, the activity log, the signup page and an admin page. No telemetry and
+      no call home — the server only ever talks to the devices that sign in to it.</li>
+  <li><strong>One image,</strong> <code>{{ docker_image }}</code>, built by CI from the
+      same commit that runs in production and tested inside the image before it is
+      published. <code>:latest</code> follows the main branch; every build also gets an
+      immutable <code>:sha-&lt;12&gt;</code> tag to pin or roll back to.</li>
+  <li><strong>MIT licensed.</strong> The name Galka and the app icon are not covered by
+      the licence; the code is.</li>
+</ul>
+
+<h2>Run it</h2>
+
+<p class="step">1 · A compose file</p>
+<p>Save this as <code>docker-compose.yml</code> in an empty directory. It runs the
+   database, Redis, a one-shot schema step and the API itself, and publishes the API on
+   port 8000 of the host:</p>
+<pre><code>name: galka
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: galka
+      POSTGRES_USER: galka
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U galka -d galka"]
+      interval: 10s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 10
+
+  # Creates the schema and exits. Two API workers starting against an empty
+  # database would otherwise race to emit the same CREATE TABLE.
+  migrate:
+    image: {{ docker_image }}:latest
+    command: ["python", "scripts/init_db.py"]
+    restart: "no"
+    environment:
+      TODOAPI_DATABASE_URL: postgresql+asyncpg://galka:${POSTGRES_PASSWORD:?}@db:5432/galka
+    depends_on:
+      db: { condition: service_healthy }
+
+  api:
+    image: {{ docker_image }}:latest
+    restart: unless-stopped
+    command: [uvicorn, app.main:app, --host=0.0.0.0, --port=8000,
+              --workers=2, --proxy-headers, --forwarded-allow-ips=*]
+    environment:
+      TODOAPI_DATABASE_URL: postgresql+asyncpg://galka:${POSTGRES_PASSWORD:?}@db:5432/galka
+      TODOAPI_REDIS_URL: redis://redis:6379/0
+      TODOAPI_ADMIN_USERNAME: ${TODOAPI_ADMIN_USERNAME:-admin}
+      TODOAPI_ADMIN_PASSWORD: ${TODOAPI_ADMIN_PASSWORD:?set it in .env}
+      TODOAPI_PUBLIC_URL: ${TODOAPI_PUBLIC_URL:-http://localhost:8000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  pgdata:
+</code></pre>
+
+<p class="step">2 · A .env beside it</p>
+<p>Compose reads <code>.env</code> from the directory it runs in. Nothing has a default
+   password, so a missing value stops the stack rather than starting it wide open:</p>
+<pre><code>POSTGRES_PASSWORD=&lt;a long random string&gt;
+TODOAPI_ADMIN_USERNAME=admin
+TODOAPI_ADMIN_PASSWORD=&lt;another long random string&gt;
+TODOAPI_PUBLIC_URL=https://todo.example.com
+
+chmod 600 .env
+</code></pre>
+
+<p class="step">3 · Start it</p>
+<pre><code>docker compose pull
+docker compose up -d
+curl http://localhost:8000/health
+</code></pre>
+
+<p class="step">4 · Put TLS in front of it</p>
+<p>The image speaks plain HTTP; terminate TLS with whatever you already run — Traefik,
+   Caddy, nginx. Two things matter for Galka: pass the <code>X-Forwarded-*</code> headers
+   through, and <strong>do not time out idle responses</strong>. <code>/events</code> is a
+   Server-Sent Events stream held open for as long as a device is connected, and a proxy
+   that cuts it at 60 seconds turns live sync into polling. The production stack uses
+   Traefik with <code>readTimeout=0</code> and <code>idleTimeout=0</code> on the HTTPS
+   entrypoint; the full file is in the repository if you want to copy it.</p>
+
+<h2>Point the app at it</h2>
+<ul>
+  <li>Open <code>https://your-host/signup</code> in a browser and create the account
+      there. The app signs in, it does not register.</li>
+  <li>In Galka, open <strong>Settings ▸ Account ▸ Sign in</strong>, replace the server
+      address with your own, and enter that email and password. Every device you sign in
+      the same way joins the same account.</li>
+  <li>Signing out leaves the tasks on the device — the local database is the source of
+      truth and sync is an addition to it, so you can move between servers without
+      losing anything.</li>
+</ul>
+
+<h2>Settings</h2>
+<p>All of them are environment variables with the <code>TODOAPI_</code> prefix.</p>
+<table>
+  <tr><th>Variable</th><th>Default</th><th>What it is</th></tr>
+  <tr><td><code>TODOAPI_DATABASE_URL</code></td><td>local postgres</td>
+      <td>Async SQLAlchemy URL — <code>postgresql+asyncpg://…</code>.</td></tr>
+  <tr><td><code>TODOAPI_REDIS_URL</code></td><td><code>redis://localhost:6379/0</code></td>
+      <td>Pub/sub fan-out behind <code>/events</code>. Nothing is stored in it.</td></tr>
+  <tr><td><code>TODOAPI_SSE_PING_SECONDS</code></td><td><code>15</code></td>
+      <td>Keep-alive interval on the event stream.</td></tr>
+  <tr><td><code>TODOAPI_ADMIN_USERNAME</code></td><td><code>admin</code></td>
+      <td>HTTP Basic user for <code>/admin</code>.</td></tr>
+  <tr><td><code>TODOAPI_ADMIN_PASSWORD</code></td><td><code>admin</code></td>
+      <td>Change it. <code>/admin</code> lists every user's data.</td></tr>
+  <tr><td><code>TODOAPI_OWNER_NAME</code></td><td>the author</td>
+      <td>Name on your copy of the public pages.</td></tr>
+  <tr><td><code>TODOAPI_CONTACT_EMAIL</code></td><td>the author's</td>
+      <td>Address those pages tell people to write to.</td></tr>
+  <tr><td><code>TODOAPI_PUBLIC_URL</code></td><td><code>{{ public_url }}</code></td>
+      <td>Your own address; used to build links on the public pages.</td></tr>
+  <tr><td><code>TODOAPI_APP_STORE_URL</code></td><td>the App Store listing</td>
+      <td>Set it empty to drop the download button.</td></tr>
+</table>
+
+<h2>Living with it</h2>
+<ul>
+  <li><strong>Updating:</strong> <code>docker compose pull &amp;&amp; docker compose up -d</code>.
+      Pin <code>image:</code> at a <code>:sha-</code> tag first if you would rather choose
+      your moment.</li>
+  <li><strong>Backups:</strong> everything is in Postgres —
+      <code>docker compose exec -T db pg_dump -U galka galka | gzip &gt; galka.sql.gz</code>
+      on a timer is enough. Redis holds no state.</li>
+  <li><strong>Schema changes</strong> are applied by the <code>migrate</code> service on
+      each start; new columns are added in place, so an update needs no manual step.</li>
+  <li><strong>Admin:</strong> <code>/admin</code> shows users, their projects and tasks
+      and their device tokens. It is reachable from wherever the API is, so give it a
+      real password or keep it off the public internet.</li>
+</ul>
+
+<h2>The protocol, if you are curious</h2>
+<p>Sync is offline-first and last-write-wins: every record carries a client-generated
+   UUID and a client-set timestamp, the server keeps a per-user sequence number, and each
+   device pulls everything newer than the cursor it holds. Deletes are two-stage — the
+   Trash is an ordinary synced field, a tombstone is written only on purge. The
+   <a href="{{ source_url }}#readme">README</a> documents it endpoint by endpoint, and
+   your own server serves the OpenAPI schema at <code>/openapi.json</code> and the
+   browsable docs at <code>/docs</code>.</p>
+
+<p>Questions, or something that does not work? Write to
+   <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>, or open an issue on
+   <a href="{{ source_url }}/issues">GitHub</a>.</p>
+{% endblock %}

@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     contact_email: str = "support@getgalka.ru"
     public_url: str = "https://api.getgalka.ru"
     app_store_url: str = "https://apps.apple.com/app/id6803008508"  # empty hides the button
+    # Where the self-hosting page sends people for the code and the image.
+    source_url: str = "https://github.com/GalkaApp/galkaapp-api"
+    docker_image: str = "skymanrm/galkaapp-api"
 
     model_config = {"env_prefix": "TODOAPI_"}
 

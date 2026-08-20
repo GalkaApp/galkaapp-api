@@ -42,14 +42,17 @@ applied change gets a new seq, and clients keep the last seq they have seen as t
 | `POST /trash/empty` | tombstones every trashed task and writes a `trash_emptied` log entry |
 | `GET /logs?limit=&action=` | activity history, newest first |
 
-Beyond the API the server renders four public pages — `/` (landing), `/privacy`,
-`/terms` and `/support` — plus `/signup` and `/admin`. They are excluded from the OpenAPI
-schema so the Swift type generator never sees them. `/privacy` and `/support` are the URLs
-the App Store listing has to point at. The owner name, contact address, public URL and
-App Store link are settings (`TODOAPI_OWNER_NAME`, `TODOAPI_CONTACT_EMAIL`,
-`TODOAPI_PUBLIC_URL`, `TODOAPI_APP_STORE_URL`); setting the last one to an empty string
-hides the App Store button. The date on the policies is the `POLICY_UPDATED` constant in
-`app/routers/pages.py` — bump it when the text changes.
+Beyond the API the server renders five public pages — `/` (landing), `/privacy`,
+`/terms`, `/support` and `/self-hosting` — plus `/signup` and `/admin`. They are excluded
+from the OpenAPI schema so the Swift type generator never sees them. `/privacy` and
+`/support` are the URLs the App Store listing has to point at; `/self-hosting` is the
+guide the app links to from Settings ▸ Account, and it carries the compose file and the
+environment variables someone needs to run their own copy. The owner name, contact
+address, public URL, App Store link, source URL and image name are settings
+(`TODOAPI_OWNER_NAME`, `TODOAPI_CONTACT_EMAIL`, `TODOAPI_PUBLIC_URL`,
+`TODOAPI_APP_STORE_URL`, `TODOAPI_SOURCE_URL`, `TODOAPI_DOCKER_IMAGE`); setting the App
+Store one to an empty string hides the download button. The date on the policies is the
+`POLICY_UPDATED` constant in `app/routers/pages.py` — bump it when the text changes.
 
 Client loop per device:
 
@@ -98,6 +101,10 @@ with projects, tasks and device tokens. HTTP Basic auth, credentials in `Setting
 Excluded from the OpenAPI schema, so it never leaks into the generated Swift types.
 
 ## Deployment
+
+Running your own copy is documented for users at `/self-hosting` (the compose file, the
+environment variables, TLS and the SSE timeout caveat, backups). What follows is how the
+hosted instance is built and deployed.
 
 Production runs on a single host (`134.122.18.213`, `api.getgalka.ru`) as a Docker
 Compose stack: Traefik terminating TLS, Postgres, Redis, a one-shot `migrate` and

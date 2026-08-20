@@ -25,6 +25,9 @@ def _context(request: Request) -> dict:
         "owner": settings.owner_name,
         "contact_email": settings.contact_email,
         "app_store_url": settings.app_store_url,
+        "source_url": settings.source_url,
+        "docker_image": settings.docker_image,
+        "public_url": settings.public_url,
         "server_host": urlparse(settings.public_url).netloc or request.url.netloc,
         "year": date.today().year,
     }
@@ -52,3 +55,8 @@ async def terms(request: Request):
 @router.get("/support")
 async def support(request: Request):
     return _page(request, "public/support.html")
+
+
+@router.get("/self-hosting")
+async def self_hosting(request: Request):
+    return _page(request, "public/self-hosting.html")
