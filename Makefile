@@ -45,10 +45,15 @@ ps:
 image-test: image
 	docker run --rm $(IMAGE) pytest -q
 
-# Deploy by hand, when you would rather not push. Same commands as the CI job.
+# Deploy by hand, when you would rather not push. Same commands as the CI job:
+# pull with this machine's registry credentials, ship the compose file, then run
+# compose on the server so it reads /var/galka/.env. Set HOST=root@<addr>.
+HOST ?= root@api.getgalka.ru
+
 deploy:
-	docker --context prod compose pull
-	docker --context prod compose up -d --remove-orphans
-	docker --context prod compose ps
+	docker --context prod pull $(IMAGE)
+	ssh $(HOST) 'install -d -m 700 /var/galka'
+	scp docker-compose.yml $(HOST):/var/galka/docker-compose.yml
+	ssh $(HOST) 'cd /var/galka && docker compose up -d --remove-orphans && docker compose ps' 
 
 .PHONY: image up down logs ps image-test deploy

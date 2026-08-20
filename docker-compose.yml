@@ -1,15 +1,22 @@
-# Production stack. Deployed by pointing a local docker CLI at the prod daemon:
+# Production stack. This file is public, so it holds no values: every secret is
+# a `${VAR:?}` reference resolved from the .env file sitting next to it.
 #
-#   docker --context prod compose pull
-#   docker --context prod compose up -d
+# Compose interpolates on the machine running the CLI, not on the Docker host,
+# so this file and its .env have to live together. They live on the server, in
+# /var/galka, and the deploy runs there over SSH:
 #
-# Configuration lives here rather than in a .env file on the server, so the file
-# in git is the whole truth about what is running. `$` in a value must be written
-# `$$` — compose treats a single one as interpolation.
+#   scp docker-compose.yml root@<host>:/var/galka/
+#   ssh root@<host> 'cd /var/galka && docker compose up -d'
+#
+# The image is pulled separately by whoever deploys, with `docker --context prod
+# pull`, so the registry credentials travel with that request and the server
+# itself never needs a registry login.
+#
+# `.env` is chmod 600 and never leaves the server. `$` in one of its values must
+# be written `$$` here — compose treats a single one as interpolation.
 
-# Pinned, not inferred from the directory name: CI drives this from the runner's
-# checkout and an operator drives it from /var/galka, and the two have to mean
-# the same stack rather than two copies of it.
+# Pinned, not inferred from the directory name, so a copy of this file run from
+# anywhere else still means this stack rather than a second one.
 name: galka
 
 services:
@@ -101,7 +108,7 @@ services:
     command: ["python", "scripts/init_db.py"]
     restart: "no"
     environment:
-      TODOAPI_DATABASE_URL: postgresql+asyncpg://galka:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/galka
+      TODOAPI_DATABASE_URL: postgresql+asyncpg://galka:${POSTGRES_PASSWORD:?}@db:5432/galka
       TODOAPI_REDIS_URL: redis://redis:6379/0
     depends_on:
       db:
@@ -126,10 +133,10 @@ services:
       # ones uvicorn sees and they can be trusted.
       - --forwarded-allow-ips=*
     environment:
-      TODOAPI_DATABASE_URL: postgresql+asyncpg://galka:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/galka
+      TODOAPI_DATABASE_URL: postgresql+asyncpg://galka:${POSTGRES_PASSWORD:?}@db:5432/galka
       TODOAPI_REDIS_URL: redis://redis:6379/0
       TODOAPI_SSE_PING_SECONDS: "15"
-      TODOAPI_ADMIN_USERNAME: admin
+      TODOAPI_ADMIN_USERNAME: ${TODOAPI_ADMIN_USERNAME:-admin}
       TODOAPI_ADMIN_PASSWORD: ${TODOAPI_ADMIN_PASSWORD:?set TODOAPI_ADMIN_PASSWORD in .env}
     depends_on:
       migrate:

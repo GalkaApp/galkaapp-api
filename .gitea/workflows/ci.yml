@@ -117,6 +117,10 @@ jobs:
           CFG
           chmod 600 ~/.ssh/config
 
+      # Compose interpolates on the machine running the CLI, so the compose file
+      # and the .env holding the production secrets have to sit together. The
+      # .env lives on the server and never leaves it, which is why the file is
+      # shipped there and compose is run there rather than over a remote context.
       - name: Deploy
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -127,9 +131,14 @@ jobs:
             || docker context update prod --docker "host=ssh://$DEPLOY_HOST"
           # The remote daemon does the pulling, but the credentials travel with
           # the request from this runner — the server needs no registry login.
-          docker --context prod compose pull
-          docker --context prod compose up -d --remove-orphans
-          docker --context prod compose ps
+          # This is the only step that needs them, so it stays on the context.
+          docker --context prod pull "$IMAGE:main"
+
+          ssh "$DEPLOY_HOST" 'install -d -m 700 /var/galka'
+          scp docker-compose.yml "$DEPLOY_HOST:/var/galka/docker-compose.yml"
+          # `up` fails loudly rather than starting with a blank password if
+          # /var/galka/.env is missing a value — every secret is a ${VAR:?}.
+          ssh "$DEPLOY_HOST" 'cd /var/galka && docker compose up -d --remove-orphans && docker compose ps'
 
       - name: Prune old images
         if: always()

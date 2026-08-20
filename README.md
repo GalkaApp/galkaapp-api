@@ -101,35 +101,51 @@ Excluded from the OpenAPI schema, so it never leaks into the generated Swift typ
 
 Production runs on a single host (`134.122.18.213`, `api.getgalka.ru`) as a Docker
 Compose stack: Traefik terminating TLS, Postgres, Redis, a one-shot `migrate` and
-the `api` itself. `docker-compose.yml` in this repo is the whole truth about what
-is running — configuration lives in it rather than in a `.env` on the server.
+the `api` itself.
+
+### Configuration and secrets
+
+`docker-compose.yml` holds **no values** — this repo is public, so every secret is a
+`${VAR:?}` reference. The values live in `/var/galka/.env` on the server (`chmod 600`,
+never committed, never copied off the box); `.env.example` lists the keys. Compose
+interpolates on the machine running the CLI rather than on the Docker host, so the
+compose file is shipped to `/var/galka` and Compose is **run there**, next to its `.env`.
+A missing value fails the deploy instead of starting Postgres with a blank password.
+
+The image pull is the one step that still runs against the remote daemon over a
+`docker context`, so the registry credentials travel with the request from whoever
+deploys and the server itself needs no registry login.
 
 CI is Gitea Actions (`.gitea/workflows/ci.yml`), three jobs on every push to `main`:
 
 1. **build** — builds the image and pushes it as `:sha-<12>`, an immutable tag.
 2. **test** — runs `pytest` *inside that image*, so what deploys is what passed.
-3. **deploy** — retags the tested manifest as `:main`, points a `docker context`
-   at the server over SSH, and runs `compose pull && compose up -d`.
+3. **deploy** — retags the tested manifest as `:main`, pulls it onto the server
+   through a `docker context`, copies `docker-compose.yml` to `/var/galka`, and runs
+   `docker compose up -d` there over SSH.
 
 Only the deploy job publishes `:main`, so a build that fails the tests never
-becomes the tag Compose pulls. Rolling back is `docker --context prod compose up -d`
-with the `image:` line pinned to an older `:sha-` tag.
+becomes the tag Compose pulls. Rolling back is editing `/var/galka/docker-compose.yml`
+to pin `image:` at an older `:sha-` tag and running `docker compose up -d` there.
 
-Secrets live on the `galka` **organisation** in Gitea (Settings → Actions → Secrets):
+CI secrets live on the `galka` **organisation** in Gitea (Settings → Actions → Secrets):
 `ACCESSTOKEN` (registry push), `DEPLOY_HOST`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`.
+None of them is a production runtime secret — those are only in `/var/galka/.env`, so
+CI can deploy without ever holding the database or admin password.
 
 Driving the stack by hand, from a checkout:
 
 ```bash
 make image        # build locally
 make image-test   # what CI runs between build and deploy
-make deploy       # pull + up against the prod daemon over SSH
+make deploy       # pull, ship the compose file, run compose on the server
 make logs CTX=prod
 make ps CTX=prod
 ```
 
-`make deploy` needs a `prod` docker context:
-`docker context create prod --docker "host=ssh://root@134.122.18.213"`.
+`make deploy` needs a `prod` docker context and SSH to the box:
+`docker context create prod --docker "host=ssh://root@134.122.18.213"`. Override the
+SSH target with `make deploy HOST=root@<addr>`.
 
 There is no Alembic: the schema comes from `create_all()`. Two uvicorn workers
 starting against an empty database would both emit the same `CREATE TABLE` and the
