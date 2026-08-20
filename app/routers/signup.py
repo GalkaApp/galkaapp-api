@@ -36,11 +36,26 @@ async def signup(
     email: Annotated[str, Form()],
     password: Annotated[str, Form()],
     password_confirm: Annotated[str, Form()],
+    # An unticked checkbox is simply absent from the form body, so both default
+    # to False. The `required` attribute stops it in the browser; this is the
+    # backstop for anything that posts straight to the endpoint.
+    accept_terms: Annotated[bool, Form()] = False,
+    accept_privacy: Annotated[bool, Form()] = False,
 ):
-    # Re-render with the address filled in on every failure: retyping it is the
-    # most annoying part of a form that rejects you.
+    # Re-render with the address and the ticks the user did make on every
+    # failure: redoing them is the most annoying part of a form that rejects you.
+    typed = {"email": email, "accept_terms": accept_terms, "accept_privacy": accept_privacy}
+
+    if not (accept_terms and accept_privacy):
+        # Name the one that is missing; "accept the terms" is no help when the
+        # terms are ticked and the policy is not.
+        missing = "the terms of use" if not accept_terms else "the privacy policy"
+        if not (accept_terms or accept_privacy):
+            missing = "the terms of use and the privacy policy"
+        return _page(request, 400, **typed, error=f"Please accept {missing} to continue.")
+
     if password != password_confirm:
-        return _page(request, 400, email=email, error="The passwords do not match.")
+        return _page(request, 400, **typed, error="The passwords do not match.")
 
     try:
         payload = RegisterRequest(email=email, password=password, device_name=DEVICE_NAME)
@@ -52,13 +67,13 @@ async def signup(
             if "@" not in email
             else "The password must be between 6 and 72 characters."
         )
-        return _page(request, 400, email=email, error=error)
+        return _page(request, 400, **typed, error=error)
 
     try:
         await AuthService.register(session, payload)
     except HTTPException as exc:
         if exc.status_code == 409:
-            return _page(request, 409, email=email,
+            return _page(request, 409, **typed,
                          error="That email already has an account. Sign in from the app instead.")
         raise
 
