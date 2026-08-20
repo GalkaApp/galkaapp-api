@@ -1,0 +1,12 @@
+.git
+.gitea
+.idea
+.venv
+.env
+.pytest_cache
+__pycache__
+*.py[cod]
+*.log
+*.md
+openapi.json
+build/

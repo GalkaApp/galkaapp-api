@@ -1,0 +1,158 @@
+# Production stack. Deployed by pointing a local docker CLI at the prod daemon:
+#
+#   docker --context prod compose pull
+#   docker --context prod compose up -d
+#
+# Configuration lives here rather than in a .env file on the server, so the file
+# in git is the whole truth about what is running. `$` in a value must be written
+# `$$` — compose treats a single one as interpolation.
+
+# Pinned, not inferred from the directory name: CI drives this from the runner's
+# checkout and an operator drives it from /var/galka, and the two have to mean
+# the same stack rather than two copies of it.
+name: galka
+
+services:
+  # The only service bound to a routable address. It terminates TLS, gets its
+  # own certificate from Let's Encrypt, and forwards cleartext to `api` over the
+  # compose network — which is why nothing else publishes a port.
+  traefik:
+    image: traefik:v3.7
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      # Nothing is routed unless it asks to be, by label.
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=galka_default
+      - --entrypoints.web.address=:80
+      # Port 80 exists to send callers to port 443. No application traffic is
+      # served on it, so the redirect can be unconditional.
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
+      - --entrypoints.websecure.address=:443
+      # SSE: /events is held open until the client leaves. The default read
+      # timeout is 0 (no limit) already; this pins it so a future default cannot
+      # start cutting streams at 60s.
+      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=0
+      - --entrypoints.websecure.transport.respondingTimeouts.idleTimeout=0
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?set ACME_EMAIL in .env}
+      - --certificatesresolvers.le.acme.storage=/acme/acme.json
+      # TLS-ALPN rather than the HTTP challenge: it is answered on 443, so it
+      # cannot be confused by the blanket redirect sitting on 80.
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --accesslog=true
+      - --log.level=INFO
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Read-only, and only ever read: the container discovers routes from other
+      # containers' labels through it.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # The account key and the issued certificate. Losing it is survivable —
+      # Traefik registers and issues again — but Let's Encrypt rate-limits how
+      # often that can happen, so it outlives the container.
+      - acme:/acme
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: galka
+      POSTGRES_USER: galka
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # 512 MB of RAM on this host, shared with redis, traefik and the app. The
+    # defaults assume a machine with room to spare and this one has none.
+    command:
+      - postgres
+      - -c
+      - max_connections=50
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - effective_cache_size=192MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U galka -d galka"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    # Pure pub/sub fan-out for /events — nothing here is state, so there is
+    # nothing to persist and a hard memory ceiling costs nothing.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "48mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Runs to completion before the api starts, so no two uvicorn workers race to
+  # emit the same CREATE TABLE against an empty database — the loser of that
+  # race dies on the duplicate and takes the whole process down with it. Once
+  # the schema is right, the api's own lifespan call finds nothing to do.
+  migrate:
+    image: git.home.fanyagin.ru/galka/galka-api:main
+    command: ["python", "scripts/init_db.py"]
+    restart: "no"
+    environment:
+      TODOAPI_DATABASE_URL: postgresql+asyncpg://galka:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/galka
+      TODOAPI_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    image: git.home.fanyagin.ru/galka/galka-api:main
+    # Pulling by a moving tag means `compose pull` is what picks up a new build;
+    # the CI job also pushes an immutable :sha- tag to roll back to.
+    restart: unless-stopped
+    command:
+      - uvicorn
+      - app.main:app
+      - --host=0.0.0.0
+      - --port=8000
+      # Two, not more: one core and 512 MB, shared with postgres. The app is
+      # async, so a second worker buys resilience across a restart rather than
+      # throughput.
+      - --workers=2
+      - --proxy-headers
+      # Only traefik can reach this port, so its X-Forwarded-* headers are the
+      # ones uvicorn sees and they can be trusted.
+      - --forwarded-allow-ips=*
+    environment:
+      TODOAPI_DATABASE_URL: postgresql+asyncpg://galka:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/galka
+      TODOAPI_REDIS_URL: redis://redis:6379/0
+      TODOAPI_SSE_PING_SECONDS: "15"
+      TODOAPI_ADMIN_USERNAME: admin
+      TODOAPI_ADMIN_PASSWORD: ${TODOAPI_ADMIN_PASSWORD:?set TODOAPI_ADMIN_PASSWORD in .env}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.galka.rule: Host(`api.getgalka.ru`) || Host(`getgalka.ru`) || Host(`www.getgalka.ru`)
+      traefik.http.routers.galka.entrypoints: websecure
+      traefik.http.routers.galka.tls.certresolver: le
+      traefik.http.services.galka.loadbalancer.server.port: "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  pgdata:
+  acme:

@@ -88,6 +88,45 @@ with projects, tasks and device tokens. HTTP Basic auth, credentials in `Setting
 (`TODOAPI_ADMIN_USERNAME` / `TODOAPI_ADMIN_PASSWORD`, default `admin`/`admin`).
 Excluded from the OpenAPI schema, so it never leaks into the generated Swift types.
 
+## Deployment
+
+Production runs on a single host (`134.122.18.213`, `api.getgalka.ru`) as a Docker
+Compose stack: Traefik terminating TLS, Postgres, Redis, a one-shot `migrate` and
+the `api` itself. `docker-compose.yml` in this repo is the whole truth about what
+is running — configuration lives in it rather than in a `.env` on the server.
+
+CI is Gitea Actions (`.gitea/workflows/ci.yml`), three jobs on every push to `main`:
+
+1. **build** — builds the image and pushes it as `:sha-<12>`, an immutable tag.
+2. **test** — runs `pytest` *inside that image*, so what deploys is what passed.
+3. **deploy** — retags the tested manifest as `:main`, points a `docker context`
+   at the server over SSH, and runs `compose pull && compose up -d`.
+
+Only the deploy job publishes `:main`, so a build that fails the tests never
+becomes the tag Compose pulls. Rolling back is `docker --context prod compose up -d`
+with the `image:` line pinned to an older `:sha-` tag.
+
+Secrets live on the `galka` **organisation** in Gitea (Settings → Actions → Secrets):
+`ACCESSTOKEN` (registry push), `DEPLOY_HOST`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`.
+
+Driving the stack by hand, from a checkout:
+
+```bash
+make image        # build locally
+make image-test   # what CI runs between build and deploy
+make deploy       # pull + up against the prod daemon over SSH
+make logs CTX=prod
+make ps CTX=prod
+```
+
+`make deploy` needs a `prod` docker context:
+`docker context create prod --docker "host=ssh://root@134.122.18.213"`.
+
+There is no Alembic: the schema comes from `create_all()`. Two uvicorn workers
+starting against an empty database would both emit the same `CREATE TABLE` and the
+loser would die on the duplicate, so `scripts/init_db.py` runs to completion as the
+`migrate` service first and the workers find nothing left to do.
+
 ## Layout
 
 ```

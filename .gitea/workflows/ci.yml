@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# The image path is written out rather than derived from ${{ github.repository }}
+# so it cannot drift from the one docker-compose.yml pulls.
+env:
+  REGISTRY: git.home.fanyagin.ru
+  IMAGE: git.home.fanyagin.ru/galka/galka-api
+
+# One deploy at a time, and never a half-applied one — a push that lands mid-run
+# waits rather than cancelling.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        # Immutable and unique. Only the deploy job publishes the `main` tag, so
+        # a build that fails the tests never becomes the tag compose pulls.
+        run: echo "tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Gitea's package registry ties a token to its owner, so the username has
+      # to be the account ACCESSTOKEN belongs to. github.actor is whoever pushed
+      # — fine while that is the same person, worth hardcoding if it stops being.
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.ACCESSTOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
+          # The registry doubles as the layer cache; a code-only change reuses
+          # the dependency layer instead of resolving requirements.txt again.
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.ACCESSTOKEN }}
+
+      # Run against the built image, not a fresh checkout: what gets deployed is
+      # then exactly what passed. No services needed — the suite runs on
+      # in-memory sqlite with the in-memory event bus.
+      - name: Test
+        run: docker run --rm ${{ env.IMAGE }}:${{ needs.build.outputs.tag }} pytest -q
+
+  deploy:
+    needs: [build, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.ACCESSTOKEN }}
+
+      # Retags the manifest in place — no pull, no rebuild, so `:main` and the
+      # tested `:sha-` tag are byte-identical.
+      - name: Publish the deploy tag
+        run: |
+          docker buildx imagetools create \
+            --tag "$IMAGE:main" \
+            "$IMAGE:${{ needs.build.outputs.tag }}"
+
+      - name: Set up SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          command -v ssh >/dev/null || (apt-get update -qq && apt-get install -y -qq openssh-client)
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          if [ -n "${DEPLOY_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            # No pinned key: trust-on-first-use. Set DEPLOY_KNOWN_HOSTS to close
+            # the window where a MITM on the runner's network could take over.
+            ssh-keyscan -H "${DEPLOY_HOST##*@}" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 644 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<'CFG'
+          Host *
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+            BatchMode yes
+            ServerAliveInterval 30
+          CFG
+          chmod 600 ~/.ssh/config
+
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          # Idempotent: a persistent runner keeps the context between runs.
+          docker context create prod --docker "host=ssh://$DEPLOY_HOST" \
+            || docker context update prod --docker "host=ssh://$DEPLOY_HOST"
+          # The remote daemon does the pulling, but the credentials travel with
+          # the request from this runner — the server needs no registry login.
+          docker --context prod compose pull
+          docker --context prod compose up -d --remove-orphans
+          docker --context prod compose ps
+
+      - name: Prune old images
+        if: always()
+        run: docker --context prod image prune -f --filter "until=168h" || true
