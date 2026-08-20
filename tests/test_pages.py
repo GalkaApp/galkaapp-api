@@ -25,9 +25,21 @@ async def test_landing_leads_with_the_pitch(client):
     assert 'href="/signup"' in body
 
 
-async def test_landing_hides_the_store_button_until_there_is_a_link(client):
+async def test_landing_leads_with_the_store_button(client):
+    body = (await client.get("/")).text
+    assert 'href="https://apps.apple.com/app/id6803008508"' in body
+    assert "Get Galka" in body
+
+
+async def test_landing_hides_the_store_button_without_a_link(client, monkeypatch):
+    """The button is dropped rather than pointing nowhere, e.g. before release."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "app_store_url", "")
     body = (await client.get("/")).text
     assert "Get Galka" not in body
+    # The sync-account button takes over as the page's one filled call to action.
+    assert 'class="btn primary" href="/signup"' in body
 
 
 @pytest.mark.parametrize("path", PUBLIC_PATHS)

@@ -47,8 +47,8 @@ Beyond the API the server renders four public pages — `/` (landing), `/privacy
 schema so the Swift type generator never sees them. `/privacy` and `/support` are the URLs
 the App Store listing has to point at. The owner name, contact address, public URL and
 App Store link are settings (`TODOAPI_OWNER_NAME`, `TODOAPI_CONTACT_EMAIL`,
-`TODOAPI_PUBLIC_URL`, `TODOAPI_APP_STORE_URL`); the store button is hidden while the last
-one is empty. The date on the policies is the `POLICY_UPDATED` constant in
+`TODOAPI_PUBLIC_URL`, `TODOAPI_APP_STORE_URL`); setting the last one to an empty string
+hides the App Store button. The date on the policies is the `POLICY_UPDATED` constant in
 `app/routers/pages.py` — bump it when the text changes.
 
 Client loop per device:

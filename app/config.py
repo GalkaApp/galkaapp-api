@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     owner_name: str = "Andrey Fanyagin"
     contact_email: str = "support@getgalka.ru"
     public_url: str = "https://api.getgalka.ru"
-    app_store_url: str = ""  # empty until the app is on the store; hides the button
+    app_store_url: str = "https://apps.apple.com/app/id6803008508"  # empty hides the button
 
     model_config = {"env_prefix": "TODOAPI_"}
 
