@@ -53,7 +53,9 @@ jobs:
           # The registry doubles as the layer cache; a code-only change reuses
           # the dependency layer instead of resolving requirements.txt again.
           cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+          # image-manifest=true is required: Gitea's registry rejects the OCI
+          # index form of the cache manifest with 400 MANIFEST_INVALID.
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
 
   test:
     needs: build
