@@ -1,6 +1,11 @@
 {% extends "public/base.html" %}
 {% block title %}Galka — tasks, projects, and a plan{% endblock %}
 
+{# Web analytics, landing page only; off unless TODOAPI_SHEPTA_PROJECT is set. #}
+{% block head %}{% if shepta_project %}
+<script async src="https://api.shepta.ru/m.js" data-project="{{ shepta_project }}"></script>
+{% endif %}{% endblock %}
+
 {% block style %}
   /* Top and bottom only; the shorthand would drop .wrap's side padding. */
   .hero { padding-top: 72px; padding-bottom: 12px; text-align: center; }

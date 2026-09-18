@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # Where the self-hosting page sends people for the code and the image.
     source_url: str = "https://github.com/GalkaApp/galkaapp-api"
     docker_image: str = "skymanrm/galkaapp-api"
+    # Shepta project id for the landing page counter. Empty means no script tag,
+    # so a self-hosted copy never reports into someone else's account.
+    shepta_project: str = ""
 
     model_config = {"env_prefix": "TODOAPI_"}
 

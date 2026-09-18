@@ -27,6 +27,7 @@ def _context(request: Request) -> dict:
         "app_store_url": settings.app_store_url,
         "source_url": settings.source_url,
         "docker_image": settings.docker_image,
+        "shepta_project": settings.shepta_project,
         "public_url": settings.public_url,
         "server_host": urlparse(settings.public_url).netloc or request.url.netloc,
         "year": date.today().year,

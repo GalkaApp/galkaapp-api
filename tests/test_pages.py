@@ -42,6 +42,30 @@ async def test_landing_hides_the_store_button_without_a_link(client, monkeypatch
     assert 'class="btn primary" href="/signup"' in body
 
 
+async def test_landing_carries_the_analytics_tag_when_configured(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "shepta_project", "mm_test")
+    body = (await client.get("/")).text
+    assert 'src="https://api.shepta.ru/m.js"' in body
+    assert 'data-project="mm_test"' in body
+
+
+async def test_no_page_carries_the_analytics_tag_by_default(client):
+    """Unset by default, so a self-hosted copy serves no third-party script."""
+    for path in PUBLIC_PATHS:
+        assert "shepta.ru" not in (await client.get(path)).text
+
+
+async def test_analytics_stays_off_the_other_pages(client, monkeypatch):
+    """Only the landing page is counted; the legal and signup pages are not."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "shepta_project", "mm_test")
+    for path in ["/privacy", "/terms", "/support", "/self-hosting", "/signup"]:
+        assert "shepta.ru" not in (await client.get(path)).text, path
+
+
 @pytest.mark.parametrize("path", PUBLIC_PATHS)
 async def test_every_page_links_to_the_legal_pages(client, path):
     body = (await client.get(path)).text
