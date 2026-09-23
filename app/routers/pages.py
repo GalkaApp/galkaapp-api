@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from app.config import settings
 
 # The public face of the service: the landing page plus the pages the App Store
-# listing has to link to. Server-rendered like /admin and /signup, and hidden
+# listing has to link to. Server-rendered like /pu and /signup, and hidden
 # from the OpenAPI schema so the Swift type generator never sees them.
 router = APIRouter(include_in_schema=False)
 

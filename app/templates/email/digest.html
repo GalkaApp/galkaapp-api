@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="{{ language }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0; padding:0; background:#FBFBFA;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBFBFA;">
+<tr><td align="center" style="padding:28px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+       style="max-width:520px; background:#FFFFFF; border:1px solid #E6E6E4; border-radius:12px;
+              font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; color:#1C1C1B;">
+<tr><td style="padding:26px 28px 6px;">
+  <div style="font-size:20px; font-weight:700; letter-spacing:-.01em;">{{ t["greeting"] }}</div>
+  <div style="font-size:13px; color:#757572; margin-top:2px;">{{ day }} · {{ summary }}</div>
+</td></tr>
+{% for section in sections %}
+<tr><td style="padding:18px 28px 0;">
+  <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+              color:{% if loop.first and section.title == t['overdue'] %}#A3564D{% else %}#ABABA8{% endif %}; margin-bottom:6px;">
+    {{ section.title }} · {{ section["items"] | length + section.more }}
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+  {% for item in section["items"] %}
+  <tr><td style="padding:7px 0; border-top:1px solid #F0F0EE; font-size:14px; line-height:1.4;">
+    {% if item.priority %}<span style="color:{{ {1: '#3B6FE0', 2: '#C08B3A', 3: '#C0685E'}[item.priority] }};">{{ "!" * item.priority }}</span> {% endif %}{{ item.title }}
+    {% if item.time or item.project %}<div style="font-size:12px; color:#757572;">{{ item.time or "" }}{% if item.time and item.project %} · {% endif %}{{ item.project or "" }}</div>{% endif %}
+  </td></tr>
+  {% endfor %}
+  {% if section.more %}
+  <tr><td style="padding:7px 0; border-top:1px solid #F0F0EE; font-size:13px; color:#757572;">{{ t["more"].format(n=section.more) }}</td></tr>
+  {% endif %}
+  </table>
+</td></tr>
+{% endfor %}
+<tr><td style="padding:22px 28px 24px; font-size:12px; color:#ABABA8; line-height:1.5;">{{ t["footer"] }}</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

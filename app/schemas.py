@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
+
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import AfterValidator, BaseModel, EmailStr, Field
 
@@ -13,6 +15,18 @@ def _to_naive_utc(dt: datetime) -> datetime:
 
 
 NaiveUTC = Annotated[datetime, AfterValidator(_to_naive_utc)]
+
+
+def _check_timezone(name: str) -> str:
+    """Accept only IANA names the server can resolve (e.g. "Europe/Moscow")."""
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise ValueError(f"Unknown timezone: {name}")
+    return name
+
+
+TimezoneName = Annotated[str, Field(min_length=1, max_length=64), AfterValidator(_check_timezone)]
 
 
 # ---------------------------------------------------------------- auth
@@ -33,6 +47,27 @@ class AuthResponse(BaseModel):
     token: str
     email: str
     seq: int
+
+
+# ---------------------------------------------------------------- account
+
+class AccountOut(BaseModel):
+    email: str
+    daily_digest: bool
+    timezone: str
+    digest_hour: int
+    language: str
+
+    model_config = {"from_attributes": True}
+
+
+class AccountUpdate(BaseModel):
+    """Partial update; omitted fields are left as they are."""
+
+    daily_digest: bool | None = None
+    timezone: TimezoneName | None = None
+    digest_hour: int | None = Field(default=None, ge=0, le=23)
+    language: Literal["en", "ru"] | None = None
 
 
 # ---------------------------------------------------------------- entities

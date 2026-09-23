@@ -10,6 +10,16 @@ class Settings(BaseSettings):
     admin_username: str = "admin"
     admin_password: str = "admin"
 
+    # Outgoing mail. An empty host turns email off.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_from_name: str = "Galka"
+    # How often the scheduler process (python -m app.scheduler) looks for due digests.
+    digest_interval_seconds: int = 300
+
     # Shown on the public pages (landing, privacy, terms, support).
     owner_name: str = "Andrey Fanyagin"
     contact_email: str = "support@getgalka.ru"

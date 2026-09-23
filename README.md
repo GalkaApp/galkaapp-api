@@ -35,6 +35,8 @@ applied change gets a new seq, and clients keep the last seq they have seen as t
 | `POST /auth/register` | `{email, password, device_name}` → `{token, email, seq}` |
 | `POST /auth/login` | same shape; a token per device |
 | `POST /auth/logout` | revokes the bearer token |
+| `GET /account` | `{email, daily_digest, timezone, digest_hour}` |
+| `PATCH /account` | partial update of the same fields; `timezone` must be an IANA name, `digest_hour` 0–23 |
 | `GET /sync?since=N` | delta pull: all projects/tasks (incl. tombstones) with `seq > N`, plus current `seq` |
 | `POST /sync` | batch push `{projects: [], tasks: []}`; LWW on `updated_at`; returns `{seq, applied, conflicts}` — `conflicts` holds the newer server rows the client must take |
 | `GET /events` | SSE stream; emits `event: sync`, `data: {"seq": N, "origin": "<X-Device-Id>"}` after each push |
@@ -43,7 +45,7 @@ applied change gets a new seq, and clients keep the last seq they have seen as t
 | `GET /logs?limit=&action=` | activity history, newest first |
 
 Beyond the API the server renders five public pages — `/` (landing), `/privacy`,
-`/terms`, `/support` and `/self-hosting` — plus `/signup` and `/admin`. They are excluded
+`/terms`, `/support` and `/self-hosting` — plus `/signup` and the admin panel at `/pu`. They are excluded
 from the OpenAPI schema so the Swift type generator never sees them. `/privacy` and
 `/support` are the URLs the App Store listing has to point at; `/self-hosting` is the
 guide the app links to from Settings ▸ Account, and it carries the compose file and the
@@ -93,12 +95,38 @@ Emits one Codable struct per Pydantic schema (camelCase + CodingKeys, UUID/Date 
 datetime format. Rerun after any schema change; the Xcode project picks the file up
 automatically. (`make openapi-json` dumps the raw spec for other tooling.)
 
+### Daily digest
+
+A user can opt into a morning email listing the day's tasks. `users` carries
+`daily_digest`, `timezone` (IANA, default `UTC`), `digest_hour` (local hour, default 8),
+`language` (`en`/`ru`) and `digest_sent_on` (the local date of the last one). The app
+sets them through `PATCH /account`, sending the device's current timezone.
+
+Sending is done by a separate process, `python -m app.scheduler` (the `scheduler`
+service in compose), so the uvicorn workers never do it. Every
+`TODOAPI_DIGEST_INTERVAL_SECONDS` (default 300) it picks users whose local clock is
+inside `[digest_hour, digest_hour + 3)` and who have not had today's digest. A
+conditional `UPDATE` on `digest_sent_on` claims each one before sending, so a second
+running copy cannot double-send; a failed send releases the claim and the next tick
+retries. The email lists open tasks due before the end of the user's local day, split
+into Overdue and Today; a day with nothing due is claimed but not emailed.
+
+Mail goes out over SMTP (`TODOAPI_SMTP_HOST`, `_PORT`, `_USERNAME`, `_PASSWORD`,
+`_FROM`); with no host set the scheduler idles and no email is sent.
+
 ## Admin
 
-Server-rendered HTML (Jinja2, no SPA) at `/admin` — users overview and a per-user page
-with projects, tasks and device tokens. HTTP Basic auth, credentials in `Settings`
-(`TODOAPI_ADMIN_USERNAME` / `TODOAPI_ADMIN_PASSWORD`, default `admin`/`admin`).
-Excluded from the OpenAPI schema, so it never leaks into the generated Swift types.
+Server-rendered HTML (Jinja2, no SPA) at `/pu` — users overview and a per-user page
+with projects, tasks and device tokens. An admin can edit a user's email, password,
+timezone, language and digest settings, switch the digest on or off straight from
+the users list, and "Send digest now" to test delivery (sent even if the day is empty).
+
+Signing in goes through a login form at `/pu/login` checked against
+`TODOAPI_ADMIN_USERNAME` / `TODOAPI_ADMIN_PASSWORD` (default `admin`/`admin`). A
+successful sign-in stores a random session token in `admin_sessions` and in an
+HttpOnly, SameSite=Lax cookie scoped to `/pu`, valid for 7 days; signing out deletes the
+row. The server holds the session, so no signing secret is needed. Excluded from the
+OpenAPI schema, so it never leaks into the generated Swift types.
 
 ## Deployment
 
@@ -107,8 +135,8 @@ environment variables, TLS and the SSE timeout caveat, backups). What follows is
 hosted instance is built and deployed.
 
 Production runs on a single host (`134.122.18.213`, `api.getgalka.ru`) as a Docker
-Compose stack: Traefik terminating TLS, Postgres, Redis, a one-shot `migrate` and
-the `api` itself.
+Compose stack: Traefik terminating TLS, Postgres, Redis, a one-shot `migrate`,
+the `api` itself and the `scheduler` for periodic jobs.
 
 ### Configuration and secrets
 
@@ -172,13 +200,15 @@ app/
 ├── main.py        app factory (tests inject SQLite + in-memory bus)
 ├── config.py      Settings (env prefix TODOAPI_)
 ├── db.py          Database: engine + session factory
-├── models.py      User, AuthToken, Project, Tag, Task, LogEntry (naive-UTC datetimes)
+├── models.py      User, AuthToken, AdminSession, Project, Tag, Task, LogEntry (naive-UTC datetimes)
 ├── schemas.py     Pydantic DTOs
 ├── security.py    bcrypt hashing, token generation
 ├── deps.py        session + bearer-token dependencies
 ├── events.py      EventBus: Redis pub/sub (prod) / in-memory (tests)
-├── services/      AuthService, SyncService (seq allocation, LWW upserts), TrashService, LogService
-└── routers/       /auth, /sync, /events, /trash, /logs
+├── mailer.py      Mailer: SMTP (prod) / in-memory outbox (tests)
+├── scheduler.py   `python -m app.scheduler`: periodic jobs (daily digest)
+├── services/      AuthService, AccountService, DigestService, SyncService (seq allocation, LWW upserts), TrashService, LogService, AdminService
+└── routers/       /auth, /account, /sync, /events, /trash, /logs, /pu
 ```
 
 Notes: schema is created on startup (`create_all`) — introduce Alembic before the first

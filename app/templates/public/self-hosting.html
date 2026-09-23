@@ -107,11 +107,28 @@ services:
       TODOAPI_ADMIN_USERNAME: ${TODOAPI_ADMIN_USERNAME:-admin}
       TODOAPI_ADMIN_PASSWORD: ${TODOAPI_ADMIN_PASSWORD:?set it in .env}
       TODOAPI_PUBLIC_URL: ${TODOAPI_PUBLIC_URL:-http://localhost:8000}
+      # Optional: lets /pu send a test digest. No host, no email.
+      TODOAPI_SMTP_HOST: ${TODOAPI_SMTP_HOST:-}
+      TODOAPI_SMTP_USERNAME: ${TODOAPI_SMTP_USERNAME:-}
+      TODOAPI_SMTP_PASSWORD: ${TODOAPI_SMTP_PASSWORD:-}
     ports:
       - "8000:8000"
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
+
+  # Optional: sends the daily digest email. Idles when no SMTP host is set.
+  scheduler:
+    image: {{ docker_image }}:latest
+    restart: unless-stopped
+    command: [python, -m, app.scheduler]
+    environment:
+      TODOAPI_DATABASE_URL: postgresql+asyncpg://galka:${POSTGRES_PASSWORD:?}@db:5432/galka
+      TODOAPI_SMTP_HOST: ${TODOAPI_SMTP_HOST:-}
+      TODOAPI_SMTP_USERNAME: ${TODOAPI_SMTP_USERNAME:-}
+      TODOAPI_SMTP_PASSWORD: ${TODOAPI_SMTP_PASSWORD:-}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
 
 volumes:
   pgdata:
@@ -166,9 +183,17 @@ curl http://localhost:8000/health
   <tr><td><code>TODOAPI_SSE_PING_SECONDS</code></td><td><code>15</code></td>
       <td>Keep-alive interval on the event stream.</td></tr>
   <tr><td><code>TODOAPI_ADMIN_USERNAME</code></td><td><code>admin</code></td>
-      <td>HTTP Basic user for <code>/admin</code>.</td></tr>
+      <td>Sign-in name for the admin panel at <code>/pu</code>.</td></tr>
   <tr><td><code>TODOAPI_ADMIN_PASSWORD</code></td><td><code>admin</code></td>
-      <td>Change it. <code>/admin</code> lists every user's data.</td></tr>
+      <td>Change it. <code>/pu</code> lists every user's data.</td></tr>
+  <tr><td><code>TODOAPI_SMTP_HOST</code></td><td>empty</td>
+      <td>SMTP server for the daily digest email. Empty sends no email at all.</td></tr>
+  <tr><td><code>TODOAPI_SMTP_PORT</code></td><td><code>587</code></td>
+      <td>587 uses STARTTLS, 465 implicit TLS.</td></tr>
+  <tr><td><code>TODOAPI_SMTP_USERNAME</code>, <code>TODOAPI_SMTP_PASSWORD</code></td><td>empty</td>
+      <td>SMTP login.</td></tr>
+  <tr><td><code>TODOAPI_SMTP_FROM</code></td><td>the username</td>
+      <td>Sender address of the digest.</td></tr>
   <tr><td><code>TODOAPI_OWNER_NAME</code></td><td>the author</td>
       <td>Name on your copy of the public pages.</td></tr>
   <tr><td><code>TODOAPI_CONTACT_EMAIL</code></td><td>the author's</td>
@@ -192,8 +217,8 @@ curl http://localhost:8000/health
       on a timer is enough. Redis holds no state.</li>
   <li><strong>Schema changes</strong> are applied by the <code>migrate</code> service on
       each start; new columns are added in place, so an update needs no manual step.</li>
-  <li><strong>Admin:</strong> <code>/admin</code> shows users, their projects and tasks
-      and their device tokens. It is reachable from wherever the API is, so give it a
+  <li><strong>Admin:</strong> <code>/pu</code> shows users, their projects and tasks
+      and their device tokens, and lets you edit an account or switch its digest. It is reachable from wherever the API is, so give it a
       real password or keep it off the public internet.</li>
 </ul>
 

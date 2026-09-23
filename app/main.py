@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.db import Database
 from app.events import EventBus, RedisEventBus
-from app.routers import admin, auth, events, logs, pages, signup, sync, trash
+from app.routers import account, admin, auth, events, logs, pages, signup, sync, trash
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -28,6 +28,7 @@ def create_app(database_url: str | None = None, bus: EventBus | None = None) -> 
 
     app = FastAPI(title="Galka", version="1.0", lifespan=lifespan)
     app.include_router(auth.router)
+    app.include_router(account.router)
     app.include_router(sync.router)
     app.include_router(events.router)
     app.include_router(trash.router)

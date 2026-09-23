@@ -1,7 +1,7 @@
 import uuid as uuid_lib
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, String, Text, Uuid
+from sqlalchemy import JSON, BigInteger, Date, DateTime, ForeignKey, String, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -23,6 +23,14 @@ class User(Base):
     # Per-user monotonically increasing change sequence (sync cursor).
     last_seq: Mapped[int] = mapped_column(BigInteger, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    # Morning digest of the day's tasks, sent at digest_hour in the user's IANA timezone.
+    daily_digest: Mapped[bool] = mapped_column(default=False)
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+    digest_hour: Mapped[int] = mapped_column(default=8)
+    # "en" | "ru" — the language the digest is written in.
+    language: Mapped[str] = mapped_column(String(8), default="en")
+    # Local date of the last digest sent, so each day gets at most one.
+    digest_sent_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
 class AuthToken(Base):
@@ -32,6 +40,17 @@ class AuthToken(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     device_name: Mapped[str] = mapped_column(String(120), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AdminSession(Base):
+    """A signed-in /pu browser session; the token lives in an HttpOnly cookie."""
+
+    __tablename__ = "admin_sessions"
+
+    token: Mapped[str] = mapped_column(String(64), primary_key=True)
+    username: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
 
 
 class Project(Base):

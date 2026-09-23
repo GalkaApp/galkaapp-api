@@ -1,0 +1,9 @@
+{{ t["greeting"] }}! {{ day }}
+{{ summary }}
+{% for section in sections %}
+{{ section.title }}
+{% for item in section["items"] %}- {% if item.time %}{{ item.time }} {% endif %}{{ item.title }}{% if item.project %} ({{ item.project }}){% endif %}
+{% endfor %}{% if section.more %}{{ t["more"].format(n=section.more) }}
+{% endif %}{% endfor %}
+--
+{{ t["footer"] }}

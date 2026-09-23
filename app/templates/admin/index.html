@@ -7,16 +7,28 @@
 <table>
   <tr>
     <th>ID</th><th>Email</th><th class="num">Projects</th><th class="num">Tasks</th>
-    <th class="num">Open</th><th class="num">Devices</th><th class="num">Seq</th><th>Registered</th>
+    <th class="num">Open</th><th class="num">Devices</th><th>Digest</th><th class="num">Seq</th><th>Registered</th>
   </tr>
   {% for row in rows %}
   <tr>
     <td class="num">{{ row.user.id }}</td>
-    <td><a href="/admin/users/{{ row.user.id }}">{{ row.user.email }}</a></td>
+    <td><a href="/pu/users/{{ row.user.id }}">{{ row.user.email }}</a></td>
     <td class="num">{{ row.projects }}</td>
     <td class="num">{{ row.tasks }}</td>
     <td class="num">{{ row.open_tasks }}</td>
     <td class="num">{{ row.devices }}</td>
+    <td>
+      <form method="post" action="/pu/users/{{ row.user.id }}/digest-toggle" class="toggle">
+        <input type="hidden" name="next" value="/pu">
+        {% if row.user.daily_digest %}
+        <button type="submit" class="on" title="Turn off">on</button>
+        <span class="muted">{{ "%02d:00" % row.user.digest_hour }} {{ row.user.timezone }}</span>
+        {% else %}
+        <input type="hidden" name="enabled" value="true">
+        <button type="submit" title="Turn on">off</button>
+        {% endif %}
+      </form>
+    </td>
     <td class="num">{{ row.user.last_seq }}</td>
     <td class="muted">{{ row.user.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
   </tr>

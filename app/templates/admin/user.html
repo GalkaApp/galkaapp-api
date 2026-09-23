@@ -4,6 +4,39 @@
 {% block content %}
 <h1>{{ user.email }}</h1>
 <div class="sub">user #{{ user.id }} · seq {{ user.last_seq }} · registered {{ user.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
+{% set f = form or {"email": user.email, "timezone": user.timezone, "digest_hour": user.digest_hour,
+                    "language": user.language, "daily_digest": user.daily_digest} %}
+{% if saved %}<p class="flash ok">Saved.</p>{% endif %}
+{% if error %}<p class="flash err">{{ error }}</p>{% endif %}
+{% if digest == "sent" %}<p class="flash ok">Digest sent to {{ user.email }}.</p>
+{% elif digest == "failed" %}<p class="flash err">Sending failed — check the SMTP settings and the API log.</p>
+{% elif digest == "off" %}<p class="flash err">Email is off: TODOAPI_SMTP_HOST is not set.</p>{% endif %}
+
+<h2>Account</h2>
+<form method="post" action="/pu/users/{{ user.id }}" class="edit">
+  <label>Email <input name="email" type="email" value="{{ f.email }}" required></label>
+  <label>New password <input name="password" type="password" autocomplete="new-password"
+         minlength="6" maxlength="72" placeholder="unchanged"></label>
+  <label class="check"><input name="daily_digest" type="checkbox" value="true"
+         {% if f.daily_digest %}checked{% endif %}> Daily digest</label>
+  <label>Digest hour
+    <select name="digest_hour">
+      {% for h in range(24) %}<option value="{{ h }}" {% if f.digest_hour|string == h|string %}selected{% endif %}>{{ "%02d:00" % h }}</option>{% endfor %}
+    </select></label>
+  <label>Timezone <input name="timezone" list="timezones" value="{{ f.timezone }}" required></label>
+  <label>Language
+    <select name="language">
+      {% for code, name in [("en", "English"), ("ru", "Русский")] %}<option value="{{ code }}" {% if f.language == code %}selected{% endif %}>{{ name }}</option>{% endfor %}
+    </select></label>
+  <div class="actions">
+    <button type="submit" class="primary">Save</button>
+    <span class="muted">{% if user.digest_sent_on %}last digest {{ user.digest_sent_on }}{% else %}no digest sent yet{% endif %}</span>
+  </div>
+  <datalist id="timezones">{% for tz in timezones %}<option value="{{ tz }}">{% endfor %}</datalist>
+</form>
+<form method="post" action="/pu/users/{{ user.id }}/digest" class="inline">
+  <button type="submit" {% if not mail_enabled %}disabled title="TODOAPI_SMTP_HOST is not set"{% endif %}>Send digest now</button>
+</form>
 
 <h2>Projects · {{ projects | length }}</h2>
 {% if projects %}

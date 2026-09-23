@@ -11,7 +11,7 @@ from app.deps import get_session
 from app.schemas import RegisterRequest
 from app.services.auth import AuthService
 
-# The app signs in only; accounts are made here. Server-rendered like /admin,
+# The app signs in only; accounts are made here. Server-rendered like /pu,
 # and hidden from the OpenAPI schema so the Swift type generator never sees it.
 router = APIRouter(include_in_schema=False)
 
